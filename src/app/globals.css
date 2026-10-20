@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-display: "Archivo Black", "Archivo", system-ui, sans-serif;
+  --font-sans: "Archivo", system-ui, sans-serif;
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-whatsapp: var(--whatsapp);
+  --color-whatsapp-foreground: var(--whatsapp-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.25rem;
+  /* Brand charcoal #333 + white, one accent (signal orange) */
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.32 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.32 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.32 0 0);
+  --primary: oklch(0.32 0 0);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.955 0 0);
+  --secondary-foreground: oklch(0.32 0 0);
+  --muted: oklch(0.955 0 0);
+  --muted-foreground: oklch(0.52 0 0);
+  --accent: oklch(0.7 0.19 45);
+  --accent-foreground: oklch(0.99 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.88 0 0);
+  --input: oklch(0.85 0 0);
+  --ring: oklch(0.32 0 0);
+  --whatsapp: oklch(0.72 0.17 150);
+  --whatsapp-foreground: oklch(0.99 0 0);
+  --sidebar: oklch(0.32 0 0);
+  --sidebar-foreground: oklch(0.99 0 0);
+  --sidebar-primary: oklch(0.7 0.19 45);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.4 0 0);
+  --sidebar-accent-foreground: oklch(0.99 0 0);
+  --sidebar-border: oklch(0.42 0 0);
+  --sidebar-ring: oklch(0.7 0.19 45);
+  --shadow-block: 4px 4px 0 0 var(--primary);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+}
+
+@utility font-display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+@utility shadow-block {
+  box-shadow: var(--shadow-block);
+}
+@utility eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@utility animate-marquee {
+  animation: marquee 25s linear infinite;
+}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.75rem 1.5rem;font-weight:700;text-transform:uppercase;font-size:.85rem;border:2px solid var(--primary);background:var(--primary);color:var(--primary-foreground);cursor:pointer}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-accent{background:var(--accent);border-color:var(--accent);color:var(--accent-foreground)}
+.btn-wa{background:var(--whatsapp);border-color:var(--whatsapp);color:var(--whatsapp-foreground)}
+.btn-ghost{background:transparent;color:var(--primary)}
+.field{width:100%;border:2px solid var(--primary);background:var(--background);padding:.6rem .75rem;font-size:.9rem}
+.chip{border:2px solid var(--primary);padding:.25rem .75rem;font-size:.75rem;font-weight:700;text-transform:uppercase;cursor:pointer}
+.chip.on{background:var(--primary);color:var(--primary-foreground)}
