@@ -1,11 +1,11 @@
 "use client";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
 export type Currency = "NGN" | "USD";
-export type Product = { id: string; name: string; description: string; category: string; gender: string; sizes: string[]; colors: string[]; images: string[]; stock: number; minQty: number; priceNgn: number; priceUsd: number; featured: boolean };
+export type Product = { id: string; name: string; description: string; category: string; gender: string; sizes: string[]; colors: string[]; images: string[]; stock: number; minQty: number; priceNgn: number; priceUsd: number; featured: boolean; hidden?: boolean };
 export type Settings = { whatsapp: string; rate: number; deliveryInfo: string; bannerTitle: string; bannerSubtitle: string };
 export type CartItem = { key: string; productId: string; name: string; image: string; size: string; color: string; qty: number; minQty: number; priceNgn: number; priceUsd: number };
 
@@ -18,7 +18,7 @@ export const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "").toLowerCa
 export const fmt = (n: number, c: Currency) => c === "NGN" ? "₦" + Math.round(n).toLocaleString("en-NG") : "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const waLink = (num: string, text: string) => `https://wa.me/${num.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 
-type Ctx = { user: User | null; isAdmin: boolean; authLoading: boolean; currency: Currency; setCurrency: (c: Currency) => void; items: CartItem[]; add: (i: Omit<CartItem, "key">) => void; setQty: (k: string, q: number) => void; remove: (k: string) => void; clear: () => void; count: number; total: (c: Currency) => number; settings: Settings; products: Product[]; productsLoading: boolean };
+type Ctx = { user: User | null; isAdmin: boolean; isOwner: boolean; allProducts: Product[]; authLoading: boolean; currency: Currency; setCurrency: (c: Currency) => void; items: CartItem[]; add: (i: Omit<CartItem, "key">) => void; setQty: (k: string, q: number) => void; remove: (k: string) => void; clear: () => void; count: number; total: (c: Currency) => number; settings: Settings; products: Product[]; productsLoading: boolean };
 const C = createContext<Ctx>(null as unknown as Ctx);
 export const useApp = () => useContext(C);
 
@@ -31,6 +31,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setPL] = useState(true);
+  const [listed, setListed] = useState(false);
 
   useEffect(() => {
     try {
@@ -40,6 +41,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLoaded(true);
     const u1 = onAuthStateChanged(auth, (u) => {
       setUser(u); setAuthLoading(false);
+      if (u?.email) getDoc(doc(db, "admins", u.email.toLowerCase())).then((d) => setListed(d.exists())).catch(() => setListed(false)); else setListed(false);
       if (u) setDoc(doc(db, "users", u.uid), { email: u.email, name: u.displayName ?? "", lastLogin: Date.now() }, { merge: true }).catch(() => {});
     });
     const u2 = onSnapshot(doc(db, "settings", "main"), (s) => s.exists() && setSettings({ ...DEFAULT_SETTINGS, ...(s.data() as Settings) }), () => {});
@@ -48,22 +50,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => { if (loaded) { localStorage.setItem("unik_cart", JSON.stringify(items)); localStorage.setItem("unik_currency", currency); } }, [items, currency, loaded]);
 
+  const isOwner = !!user?.emailVerified && !!ADMIN_EMAIL && user.email?.toLowerCase() === ADMIN_EMAIL;
   const value = useMemo<Ctx>(() => ({
-    user, authLoading, isAdmin: !!user && !!ADMIN_EMAIL && user.email?.toLowerCase() === ADMIN_EMAIL,
-    currency, setCurrency, items, settings, products, productsLoading,
+    user, authLoading, isOwner, isAdmin: isOwner || (!!user?.emailVerified && listed), allProducts: products,
+    currency, setCurrency, items, settings, products: products.filter((p) => !p.hidden), productsLoading,
     add: (i) => { const key = `${i.productId}-${i.size}-${i.color}`; setItems((p) => p.some((x) => x.key === key) ? p.map((x) => x.key === key ? { ...x, qty: x.qty + i.qty } : x) : [...p, { ...i, key }]); },
     setQty: (k, q) => setItems((p) => p.map((x) => x.key === k ? { ...x, qty: Math.max(x.minQty, q) } : x)),
     remove: (k) => setItems((p) => p.filter((x) => x.key !== k)),
     clear: () => setItems([]),
     count: items.reduce((s, i) => s + i.qty, 0),
     total: (c) => items.reduce((s, i) => s + i.qty * (c === "NGN" ? i.priceNgn : i.priceUsd), 0),
-  }), [user, authLoading, currency, items, settings, products, productsLoading]);
+  }), [user, authLoading, isOwner, listed, currency, items, settings, products, productsLoading]);
   return <C.Provider value={value}>{children}</C.Provider>;
 }
 
-export const SEED: Omit<Product, "id">[] = [
-  { name: "Heavyweight Oversized Hoodie", description: "480gsm cotton fleece, dropped shoulders and a relaxed oversized fit.", category: "Hoodies", gender: "unisex", sizes: ["S", "M", "L", "XL", "XXL"], colors: ["Charcoal", "Black", "Off-White"], images: ["/images/hoodie.jpg"], stock: 240, minQty: 6, priceNgn: 9500, priceUsd: 7, featured: true },
-  { name: "Wide Leg Baggy Jeans", description: "Rigid washed denim with an extra-wide leg and stacked hem.", category: "Baggy", gender: "men", sizes: ["28", "30", "32", "34", "36"], colors: ["Washed Black", "Light Blue"], images: ["/images/baggy-jeans.jpg"], stock: 180, minQty: 6, priceNgn: 11000, priceUsd: 8, featured: true },
-  { name: "Women's Cargo Two-Piece", description: "Cropped zip top with matching parachute cargo pants.", category: "Women", gender: "women", sizes: ["S", "M", "L", "XL"], colors: ["Charcoal", "Sand"], images: ["/images/women-set.jpg"], stock: 120, minQty: 4, priceNgn: 14500, priceUsd: 10, featured: true },
-  { name: "Baggy Cargo Jeans", description: "Loose cargo denim with utility pockets.", category: "Baggy", gender: "women", sizes: ["26", "28", "30", "32"], colors: ["Black", "Grey"], images: ["/images/baggy-jeans.jpg"], stock: 150, minQty: 6, priceNgn: 10500, priceUsd: 7.5, featured: true },
-];
+/** Uploads an image to Cloudinary (unsigned preset) and returns an optimised URL. */
+export async function uploadImage(file: File): Promise<string> {
+  const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, preset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+  if (!cloud || !preset) throw new Error("Cloudinary is not configured. Set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET.");
+  const body = new FormData(); body.append("file", file); body.append("upload_preset", preset); body.append("folder", "unik-trends/products");
+  const r = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, { method: "POST", body });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error?.message ?? "Image upload failed");
+  return (j.secure_url as string).replace("/upload/", "/upload/f_auto,q_auto,w_1000/");
+}

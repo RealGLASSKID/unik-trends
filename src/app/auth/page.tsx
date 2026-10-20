@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { GoogleAuthProvider, createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, updateProfile } from "firebase/auth";
+import { GoogleAuthProvider, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 export default function AuthPage() {
@@ -11,7 +11,7 @@ export default function AuthPage() {
   const [msg, setMsg] = useState(""); const [busy, setBusy] = useState(false);
   const done = () => router.push(new URLSearchParams(location.search).get("next") || "/account");
   const run = async (fn: () => Promise<unknown>) => { setBusy(true); setMsg(""); try { await fn(); done(); } catch (e) { setMsg((e as Error).message.replace("Firebase: ", "")); } setBusy(false); };
-  const submit = (e: React.FormEvent) => { e.preventDefault(); run(async () => { if (mode === "login") await signInWithEmailAndPassword(auth, email, pw); else { const c = await createUserWithEmailAndPassword(auth, email, pw); if (name) await updateProfile(c.user, { displayName: name }); } }); };
+  const submit = (e: React.FormEvent) => { e.preventDefault(); run(async () => { if (mode === "login") await signInWithEmailAndPassword(auth, email, pw); else { const c = await createUserWithEmailAndPassword(auth, email, pw); if (name) await updateProfile(c.user, { displayName: name }); await sendEmailVerification(c.user); } }); };
   return (
     <div className="mx-auto max-w-md px-4 py-16">
       <h1 className="text-5xl">{mode === "login" ? "Log in" : "Sign up"}</h1>
