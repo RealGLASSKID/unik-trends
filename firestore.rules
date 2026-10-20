@@ -14,9 +14,17 @@ service cloud.firestore {
     match /settings/{id} { allow read: if true; allow write: if admin(); }
     match /users/{uid} { allow read: if request.auth != null && request.auth.uid == uid || admin(); allow write: if request.auth != null && request.auth.uid == uid; }
     match /orders/{id} {
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid && request.resource.data.status == 'Pending';
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && (request.resource.data.status == 'Pending' || request.resource.data.status == 'Booked');
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || admin());
-      allow update: if admin();
+      // Customer may mark their own order paid after Paystack success; admin can update anything
+      allow update: if admin()
+        || (request.auth != null
+            && resource.data.userId == request.auth.uid
+            && request.resource.data.userId == resource.data.userId
+            && request.resource.data.paymentStatus == 'paid'
+            && resource.data.paymentStatus == 'unpaid');
     }
   }
 }

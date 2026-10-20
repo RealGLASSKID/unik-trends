@@ -7,7 +7,16 @@ import { fmt, useApp, waLink } from "@/lib/app";
 const NAV = [["/shop", "Shop"], ["/about", "About"], ["/delivery", "Delivery"], ["/contact", "Contact"]];
 
 export function Logo({ inverted }: { inverted?: boolean }) {
-  return <Link href="/" className="flex items-baseline gap-1 leading-none" aria-label="UNIK TRENDS home"><span className={`font-display text-2xl ${inverted ? "text-primary-foreground" : "text-primary"}`}>UNIK</span><span className="text-xs font-bold lowercase tracking-widest text-accent">trends</span></Link>;
+  return (
+    <Link href="/" className="flex items-center gap-2 leading-none" aria-label="UNIK TRENDS home">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo.png"
+        alt="UNIK TRENDS"
+        className={`h-9 w-auto ${inverted ? "brightness-0 invert" : ""}`}
+      />
+    </Link>
+  );
 }
 export function CurrencyToggle() {
   const { currency, setCurrency } = useApp();
