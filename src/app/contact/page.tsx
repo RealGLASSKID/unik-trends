@@ -38,9 +38,16 @@ export default function ContactPage() {
     <div className="mx-auto max-w-7xl px-4 py-12">
       <h1 className="text-5xl">Contact</h1>
       <p className="mt-3 max-w-2xl text-muted-foreground">
-        Questions about sizes, bulk deals, or visit times? Send a message — it goes straight to our
-        admin dashboard. For a quick chat you can still reach us on WhatsApp.
+        Ordering needs no chat: pick your pieces and order or book online. Contact us only when you need something the website can not do.
+        Messages go straight to our admin dashboard and we reply within 48 hours.
       </p>
+      <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <div className="border-2 border-primary p-5"><h2 className="text-xl">Send a message for</h2>
+          <ul className="mt-3 grid gap-1 text-sm text-muted-foreground"><li>• Bulk or very large orders and special quantities</li><li>• Custom colours, sizes or your own designs</li><li>• Booking a visit to our shop in Tejuosho</li><li>• Help with an order you already placed</li><li>• Delivery arrangements other than waybill or pick-up</li></ul></div>
+        <div className="border-2 border-primary p-5"><h2 className="text-xl">Use WhatsApp for</h2>
+          <ul className="mt-3 grid gap-1 text-sm text-muted-foreground"><li>• Quick questions, like whether a size or colour is in stock</li><li>• Sending a photo of the item you are asking about</li><li>• Checking where your order or waybill is</li></ul>
+          <p className="mt-3 text-xs font-bold uppercase">We reply within 48 hours. Prices are fixed on the website, so there is no need to negotiate.</p></div>
+      </div>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-2">
         <div>

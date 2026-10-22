@@ -38,6 +38,7 @@ import {
   type Product,
   type Settings,
 } from "@/lib/app";
+import { LogoLoader } from "@/components/Brand";
 import type { Order } from "@/lib/app";
 
 const LOW = 10;
@@ -64,18 +65,44 @@ type Customer = {
 const blank: Draft = {
   name: "",
   description: "",
-  category: "Hoodies",
+  category: "",
   gender: "unisex",
   sizes: [],
   colors: [],
   images: [],
   stock: 0,
-  minQty: 1,
+  minQty: 2,
   priceNgn: 0,
   priceUsd: 0,
   featured: false,
   hidden: false,
 };
+
+const COLORS = ["Black", "White", "Charcoal", "Grey", "Navy", "Blue", "Light Blue", "Washed Black", "Red", "Green", "Brown", "Cream", "Sand", "Pink", "Purple", "Orange", "Yellow"];
+const SIZES = ["S", "M", "L", "XL", "XXL", "XXXL", "26", "28", "30", "32", "34", "36", "38", "40"];
+const DOT: Record<string, string> = { black: "#111", white: "#fff", charcoal: "#333", grey: "#888", gray: "#888", navy: "#1b2a4a", blue: "#2563eb", "light blue": "#93c5fd", "washed black": "#2a2a2a", red: "#dc2626", green: "#16a34a", brown: "#7c4a21", cream: "#f5efdc", sand: "#d8c3a0", pink: "#f472b6", purple: "#7e22ce", orange: "#f97316", yellow: "#facc15" };
+function Picker({ label, options, value, onChange, hint, dots }: { label: string; options: string[]; value: string[]; onChange: (v: string[]) => void; hint: string; dots?: boolean }) {
+  const [t, setT] = useState("");
+  const all = [...options, ...value.filter((v) => !options.some((o) => o.toLowerCase() === v.toLowerCase()))];
+  const toggle = (o: string) => onChange(value.includes(o) ? value.filter((x) => x !== o) : [...value, o]);
+  const add = () => { const v = t.trim(); if (v && !value.some((x) => x.toLowerCase() === v.toLowerCase())) onChange([...value, v]); setT(""); };
+  return (
+    <div className="grid gap-2">
+      <p className="text-xs font-bold uppercase">{label} <span className="font-normal normal-case text-muted-foreground">· {hint}</span></p>
+      <div className="flex flex-wrap gap-2">
+        {all.map((o) => (
+          <button type="button" key={o} onClick={() => toggle(o)} className={`chip flex items-center gap-1.5 ${value.includes(o) ? "on" : ""}`}>
+            {dots && DOT[o.toLowerCase()] && <span className="h-3 w-3 rounded-full border border-neutral-400" style={{ background: DOT[o.toLowerCase()] }} />}{o}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input className="field" placeholder={`Add another ${label.toLowerCase().replace(/s$/, "")}…`} value={t} onChange={(e) => setT(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        <button type="button" className="btn btn-ghost !px-4" onClick={add}>Add</button>
+      </div>
+    </div>
+  );
+}
 
 const list = (v: string) =>
   v
@@ -106,6 +133,7 @@ export default function Admin() {
   const [newAdmin, setNewAdmin] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [s, setS] = useState<Settings>(settings);
+  const [saveMsg, setSaveMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string[]>([]);
@@ -322,7 +350,7 @@ export default function Admin() {
   }, [orders, orderStatus, orderSearch, selectedCustomerId]);
 
   if (authLoading) {
-    return <div className="px-4 py-20 text-center">Loading…</div>;
+    return <LogoLoader />;
   }
 
   if (!isAdmin) {
@@ -563,17 +591,20 @@ export default function Admin() {
                   }
                 />
                 <div className="grid grid-cols-2 gap-3">
-                  <select
-                    className="field"
-                    value={draft.category}
-                    onChange={(e) =>
-                      setDraft({ ...draft, category: e.target.value })
-                    }
-                  >
-                    {CATEGORIES.map((c) => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </select>
+                  <div>
+                    <input
+                      className="field"
+                      list="product-types"
+                      placeholder="Product type (e.g. Baggy Jeans, Hoodie)"
+                      value={draft.category}
+                      onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+                    />
+                    <datalist id="product-types">
+                      {Array.from(new Set([...CATEGORIES.filter((c) => c !== "Other"), ...products.map((p) => p.category)])).map((c) => (
+                        <option key={c} value={c} />
+                      ))}
+                    </datalist>
+                  </div>
                   <select
                     className="field"
                     value={draft.gender}
@@ -586,22 +617,8 @@ export default function Admin() {
                     ))}
                   </select>
                 </div>
-                <input
-                  className="field"
-                  placeholder="Sizes, comma separated (S, M, L)"
-                  defaultValue={draft.sizes.join(", ")}
-                  onBlur={(e) =>
-                    setDraft({ ...draft, sizes: list(e.target.value) })
-                  }
-                />
-                <input
-                  className="field"
-                  placeholder="Colours, comma separated"
-                  defaultValue={draft.colors.join(", ")}
-                  onBlur={(e) =>
-                    setDraft({ ...draft, colors: list(e.target.value) })
-                  }
-                />
+                <Picker label="Sizes" options={SIZES} value={draft.sizes} onChange={(sizes) => setDraft({ ...draft, sizes })} hint="Pick sizes or type your own (e.g. 38, Free size)" />
+                <Picker label="Colours" options={COLORS} value={draft.colors} onChange={(colors) => setDraft({ ...draft, colors })} hint="Pick colours or type one that is not listed" dots />
                 <div className="grid grid-cols-2 gap-3">
                   {num("priceNgn", "Price ₦")}
                   {num("priceUsd", "Price $ (0 = auto from rate)")}
@@ -1281,90 +1298,62 @@ export default function Admin() {
         )}
 
         {tab === "Settings" && (
-          <div className="mt-6 grid max-w-xl gap-3">
-            <label className="grid gap-1 text-xs font-bold uppercase">
-              WhatsApp number (with country code, e.g. 23480...)
-              <input
-                className="field"
-                value={s.whatsapp}
-                onChange={(e) => setS({ ...s, whatsapp: e.target.value })}
-              />
-            </label>
-            <label className="grid gap-1 text-xs font-bold uppercase">
-              Exchange rate (₦ per $1)
-              <input
-                className="field"
-                type="number"
-                value={s.rate}
-                onChange={(e) =>
-                  setS({ ...s, rate: Number(e.target.value) })
-                }
-              />
-            </label>
-            <label className="grid gap-1 text-xs font-bold uppercase">
-              Waybill fee (₦) — charged when customer chooses waybill
-              <input
-                className="field"
-                type="number"
-                value={s.waybillFeeNgn ?? 2500}
-                onChange={(e) =>
-                  setS({ ...s, waybillFeeNgn: Number(e.target.value) })
-                }
-              />
-            </label>
-            <label className="grid gap-1 text-xs font-bold uppercase">
-              Shop address (shown on bookings)
-              <input
-                className="field"
-                value={s.shopAddress ?? ""}
-                onChange={(e) =>
-                  setS({ ...s, shopAddress: e.target.value })
-                }
-              />
-            </label>
-            <label className="grid gap-1 text-xs font-bold uppercase">
-              Homepage title
-              <input
-                className="field"
-                value={s.bannerTitle}
-                onChange={(e) =>
-                  setS({ ...s, bannerTitle: e.target.value })
-                }
-              />
-            </label>
-            <label className="grid gap-1 text-xs font-bold uppercase">
-              Homepage subtitle
-              <textarea
-                className="field"
-                rows={2}
-                value={s.bannerSubtitle}
-                onChange={(e) =>
-                  setS({ ...s, bannerSubtitle: e.target.value })
-                }
-              />
-            </label>
-            <label className="grid gap-1 text-xs font-bold uppercase">
-              Delivery info
-              <textarea
-                className="field"
-                rows={5}
-                value={s.deliveryInfo}
-                onChange={(e) =>
-                  setS({ ...s, deliveryInfo: e.target.value })
-                }
-              />
-            </label>
-            <button
-              className="btn"
-              onClick={() =>
-                setDoc(doc(db, "settings", "main"), {
-                  ...DEFAULT_SETTINGS,
-                  ...s,
-                }).then(() => alert("Saved"))
-              }
-            >
-              Save settings
-            </button>
+          <div className="mt-6 grid max-w-3xl gap-6">
+            <p className="text-sm text-muted-foreground">Everything here updates the live website straight away for all visitors.</p>
+            {[
+              ["Contact", [
+                ["WhatsApp number", "whatsapp", "text", "With country code, e.g. 2348138911483"],
+                ["Contact email", "contactEmail", "text", "Shown on the Contact page"],
+                ["Opening hours", "openingHours", "text", "e.g. Mon–Sat, 9am–6pm"],
+                ["Shop address", "shopAddress", "text", "Shown on the site and checkout"],
+              ]],
+              ["Pricing & delivery", [
+                ["Exchange rate (₦ per $1)", "rate", "number", "Used to auto-fill dollar prices"],
+                ["Waybill fee (₦)", "waybillFeeNgn", "number", "Added at checkout for waybill delivery"],
+              ]],
+              ["Homepage", [
+                ["Top announcement bar", "announcement", "text", "The dark strip at the very top"],
+                ["Hero title", "bannerTitle", "text", ""],
+              ]],
+            ].map(([title, fields]) => (
+              <div key={title as string} className="border-2 border-primary p-5 shadow-block">
+                <h2 className="mb-4 text-xl">{title as string}</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {(fields as string[][]).map(([l, k, type, hint]) => (
+                    <label key={k} className="grid gap-1 text-xs font-bold uppercase">
+                      {l}
+                      <input className="field" type={type} value={String((s as unknown as Record<string, string | number>)[k] ?? "")} onChange={(e) => setS({ ...s, [k]: type === "number" ? Number(e.target.value) : e.target.value })} />
+                      {hint && <span className="text-[11px] font-normal normal-case text-muted-foreground">{hint}</span>}
+                    </label>
+                  ))}
+                </div>
+                {title === "Homepage" && (
+                  <label className="mt-4 grid gap-1 text-xs font-bold uppercase">Hero subtitle
+                    <textarea className="field" rows={2} value={s.bannerSubtitle} onChange={(e) => setS({ ...s, bannerSubtitle: e.target.value })} />
+                  </label>
+                )}
+              </div>
+            ))}
+            <div className="border-2 border-primary p-5 shadow-block">
+              <h2 className="mb-4 text-xl">Delivery information</h2>
+              <textarea className="field" rows={5} value={s.deliveryInfo} onChange={(e) => setS({ ...s, deliveryInfo: e.target.value })} />
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                className="btn"
+                onClick={async () => {
+                  let wa = s.whatsapp.replace(/\D/g, "");
+                  if (wa.startsWith("0")) wa = "234" + wa.slice(1);
+                  if (wa.length < 11) return setSaveMsg("Enter a valid WhatsApp number with country code.");
+                  if (!(s.rate > 0) || s.waybillFeeNgn < 0) return setSaveMsg("Exchange rate must be above 0 and the waybill fee cannot be negative.");
+                  try { await setDoc(doc(db, "settings", "main"), { ...DEFAULT_SETTINGS, ...s, whatsapp: wa }); setSaveMsg("Saved. The website is updated."); }
+                  catch { setSaveMsg("Could not save. Check your admin access and try again."); }
+                }}
+              >
+                Save settings
+              </button>
+              {saveMsg && <p className="text-sm font-bold">{saveMsg}</p>}
+            </div>
           </div>
         )}
       </section>

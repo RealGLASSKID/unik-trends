@@ -1,19 +1,28 @@
 "use client";
-
-import { AppProvider } from "@/lib/app";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { AppProvider, useApp } from "@/lib/app";
 import { Header, Footer, WhatsAppButton } from "@/components/Chrome";
+import { LogoLoader, Welcome } from "@/components/Brand";
 import { PwaRegister } from "@/components/PwaRegister";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+const OPEN = ["/auth"]; // admin email/password login stays reachable without Google
+
+function Shell({ children }: { children: React.ReactNode }) {
+  const { user, authLoading } = useApp();
+  const path = usePathname();
+  const [splash, setSplash] = useState(true);
+  useEffect(() => { const t = setTimeout(() => setSplash(false), 1400); return () => clearTimeout(t); }, []);
+  if (authLoading || splash) return <LogoLoader full />;
+  if (!user && !OPEN.includes(path)) return <Welcome />;
   return (
-    <AppProvider>
-      <div className="flex min-h-screen flex-col">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </div>
+    <>
+      <div className="flex min-h-screen flex-col"><Header /><main className="flex-1">{children}</main><Footer /></div>
       <WhatsAppButton />
-      <PwaRegister />
-    </AppProvider>
+    </>
   );
+}
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return <AppProvider><Shell>{children}</Shell><PwaRegister /></AppProvider>;
 }

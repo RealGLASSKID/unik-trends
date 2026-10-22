@@ -4,6 +4,9 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { collection, doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
+export const SHOP_ADDRESS = "Tejuosho Plaza, Tejuosho Market, Yaba, Lagos, Nigeria";
+export const MAP_QUERY = "Tejuosho Market, Yaba, Lagos, Nigeria";
+
 export type Currency = "NGN" | "USD";
 export type Product = {
   id: string;
@@ -30,6 +33,9 @@ export type Settings = {
   /** Flat waybill fee in NGN charged when customer chooses waybill delivery */
   waybillFeeNgn: number;
   shopAddress: string;
+  announcement: string;
+  contactEmail: string;
+  openingHours: string;
 };
 export type CartItem = {
   key: string;
@@ -87,15 +93,18 @@ export const CATEGORIES = ["Men", "Women", "Hoodies", "Baggy", "Other"];
 export const DELIVERY = ["Waybill to another state", "Pick-up in person", "Other"];
 export const STATUSES = ["Pending", "Booked", "Confirmed/Paid", "Shipped", "Delivered", "Cancelled"];
 export const DEFAULT_SETTINGS: Settings = {
-  whatsapp: "2348000000000",
+  whatsapp: "2348138911483",
   rate: 1500,
   bannerTitle: "Built Different.",
   bannerSubtitle:
     "Trendy streetwear straight from the manufacturer. Wholesale prices for resellers across Nigeria.",
   deliveryInfo:
-    "Waybill: we send to any state via trusted park/logistics partners. Waybill fee is paid online with your order (or on pickup if you book).\nPick-up: collect your order in person at our Lagos workshop after confirmation.\nOther: chat with us on WhatsApp to arrange a custom option.",
+    "Waybill: we send to any state via trusted park/logistics partners. Waybill fee is paid online with your order (or on pickup if you book).\nPick-up: collect your order in person at our Lagos workshop after confirmation.\nOther: send us a message on the Contact page to arrange a custom option.",
   waybillFeeNgn: 2500,
   shopAddress: "Tejuosho (Tejuoso) Market Plaza, Yaba, Lagos — production & pick-up",
+  announcement: "Wholesale prices for resellers · Nationwide waybill",
+  contactEmail: "",
+  openingHours: "Mon–Sat, 9am–6pm",
 };
 export const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "").toLowerCase();
 export const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
@@ -165,7 +174,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     const u2 = onSnapshot(
       doc(db, "settings", "main"),
-      (s) => s.exists() && setSettings({ ...DEFAULT_SETTINGS, ...(s.data() as Settings) }),
+      (s) => s.exists() && setSettings({ ...DEFAULT_SETTINGS, ...(s.data() as Settings), ...((s.data() as Settings).whatsapp === "2348000000000" ? { whatsapp: DEFAULT_SETTINGS.whatsapp } : {}) }),
       () => {}
     );
     const u3 = onSnapshot(

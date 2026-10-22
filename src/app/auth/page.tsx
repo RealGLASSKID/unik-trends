@@ -12,6 +12,7 @@ import {
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { ADMIN_EMAIL, useApp } from "@/lib/app";
+import { GoogleButton, LogoLoader } from "@/components/Brand";
 
 async function ensureUserDoc(u: User, extra?: { name?: string }) {
   await setDoc(
@@ -54,7 +55,7 @@ export default function AuthPage() {
   };
 
   if (authLoading) {
-    return <div className="px-4 py-20 text-center">Loading…</div>;
+    return <LogoLoader />;
   }
 
   if (user) {
@@ -83,22 +84,10 @@ export default function AuthPage() {
     <div className="mx-auto max-w-md px-4 py-16">
       <h1 className="text-5xl">Sign in</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Customers sign in with Google only. Browse freely without an account until checkout.
+        Customers sign in with Google. Admins can also use email and password below.
       </p>
 
-      <button
-        type="button"
-        className="btn mt-8 w-full"
-        disabled={busy}
-        onClick={() =>
-          run(async () => {
-            const res = await signInWithPopup(auth, new GoogleAuthProvider());
-            await ensureUserDoc(res.user);
-          })
-        }
-      >
-        Continue with Google
-      </button>
+      <div className="mt-8"><GoogleButton label="Continue with Google" /></div>
 
       <button
         type="button"

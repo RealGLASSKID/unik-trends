@@ -122,3 +122,6 @@
 .field{width:100%;border:2px solid var(--primary);background:var(--background);padding:.6rem .75rem;font-size:.9rem}
 .chip{border:2px solid var(--primary);padding:.25rem .75rem;font-size:.75rem;font-weight:700;text-transform:uppercase;cursor:pointer}
 .chip.on{background:var(--primary);color:var(--primary-foreground)}
+.logo-shine{background:linear-gradient(105deg,#333 0%,#333 38%,#ff7a1a 47%,#fff 50%,#ff7a1a 53%,#333 62%,#333 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:logoshine 1.6s linear infinite}
+@keyframes logoshine{0%{background-position:150% 0}100%{background-position:-50% 0}}
+@media (prefers-reduced-motion:reduce){.logo-shine{animation-duration:4s}}
