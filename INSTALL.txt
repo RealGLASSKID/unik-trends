@@ -1,0 +1,25 @@
+UNIK TRENDS — how to run THIS build (Windows)
+
+Your screenshot still showed DELIVERY + ACCOUNT in the menu.
+That means the old project folder was still running.
+
+1. Stop the server (Ctrl+C in the terminal).
+2. Rename your old folder, e.g. unik-trends-OLD
+3. Unzip this archive fully (you should get a folder named unik-trends)
+4. Copy your .env.local from the old folder into the new unik-trends folder
+5. In .env.local set:
+   NEXT_PUBLIC_ADMIN_EMAIL=your-login-email@example.com
+6. Open PowerShell in the new folder:
+   npm install
+   npm run dev
+7. Open http://localhost:3000 and hard refresh (Ctrl+Shift+R)
+
+How to know you have the NEW code:
+- Menu is only: SHOP | ABOUT | CONTACT  (no Delivery, no Account)
+- Footer says: build-2026-10-21
+- Home has sections: How ordering works, Delivery & pick-up
+- Contact has a form + map
+- Checkout has Book & pick up / Order online
+
+Also paste firestore.rules into Firebase Console → Firestore → Rules
+(change owner@example.com to your real email).

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Download, Share, X } from "lucide-react";
 
 type BeforeInstallPromptEvent = Event & {
@@ -35,10 +36,12 @@ function isIos() {
 }
 
 export function PwaRegister() {
+  const pathname = usePathname();
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
   const [iosHint, setIosHint] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [msg, setMsg] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -47,20 +50,20 @@ export function PwaRegister() {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
 
+    // Don't bother on admin while setting up the store
+    if (pathname?.startsWith("/admin")) return;
     if (isStandalone() || wasDismissedRecently()) return;
 
     const onBip = (e: Event) => {
       e.preventDefault();
       setDeferred(e as BeforeInstallPromptEvent);
-      // Small delay so it doesn't fight first paint
       setTimeout(() => setShow(true), 2500);
     };
     window.addEventListener("beforeinstallprompt", onBip);
 
-    // iOS has no beforeinstallprompt — show manual Add to Home Screen tip
     if (isIos()) {
       setTimeout(() => {
-        if (!isStandalone() && !wasDismissedRecently()) {
+        if (!isStandalone() && !wasDismissedRecently() && !pathname?.startsWith("/admin")) {
           setIosHint(true);
           setShow(true);
         }
@@ -68,7 +71,7 @@ export function PwaRegister() {
     }
 
     return () => window.removeEventListener("beforeinstallprompt", onBip);
-  }, []);
+  }, [pathname]);
 
   const dismiss = () => {
     setShow(false);
@@ -79,8 +82,14 @@ export function PwaRegister() {
   };
 
   const install = async () => {
-    if (!deferred) return;
+    if (!deferred) {
+      setMsg(
+        "Install is not available in this browser yet. On Chrome/Edge (Android or desktop), use the browser menu → “Install app”, or open the site on your phone."
+      );
+      return;
+    }
     setInstalling(true);
+    setMsg("");
     try {
       await deferred.prompt();
       const choice = await deferred.userChoice;
@@ -88,15 +97,18 @@ export function PwaRegister() {
         setShow(false);
         setDeferred(null);
       } else {
-        dismiss();
+        setMsg("Install cancelled. You can install later from the browser menu.");
+        setTimeout(dismiss, 2500);
       }
     } catch {
-      dismiss();
+      setMsg(
+        "Could not open the install dialog. Try Chrome menu → Install app, or use your phone."
+      );
     }
     setInstalling(false);
   };
 
-  if (!show) return null;
+  if (!show || pathname?.startsWith("/admin")) return null;
 
   return (
     <div
@@ -130,6 +142,8 @@ export function PwaRegister() {
         </div>
       </div>
 
+      {msg && <p className="mt-2 text-xs text-destructive">{msg}</p>}
+
       {iosHint ? (
         <p className="mt-3 flex items-start gap-2 border-t-2 border-border pt-3 text-xs text-muted-foreground">
           <Share className="mt-0.5 h-4 w-4 shrink-0" />
@@ -143,7 +157,7 @@ export function PwaRegister() {
           <button
             type="button"
             className="btn btn-accent flex-1 !py-2 text-xs"
-            disabled={installing || !deferred}
+            disabled={installing}
             onClick={install}
           >
             <Download className="h-4 w-4" />

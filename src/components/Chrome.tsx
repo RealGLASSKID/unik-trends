@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Menu, MessageCircle, ShoppingBag, User, X } from "lucide-react";
 import { fmt, useApp, waLink } from "@/lib/app";
 
-const NAV = [["/shop", "Shop"], ["/about", "About"], ["/delivery", "Delivery"], ["/contact", "Contact"]];
+const NAV = [["/shop", "Shop"], ["/about", "About"], ["/contact", "Contact"]];
 
 export function Logo({ inverted }: { inverted?: boolean }) {
   return (
@@ -25,7 +25,10 @@ export function CurrencyToggle() {
 export function Header() {
   const { count, user, isAdmin } = useApp();
   const [open, setOpen] = useState(false);
-  const links = [...NAV, [user ? "/account" : "/auth", "Account"], ...(isAdmin ? [["/admin", "Admin"]] : [])];
+  const links: [string, string][] = [
+    ...NAV.map(([h, l]) => [h, l] as [string, string]),
+    ...(isAdmin ? [["/admin", "Admin"] as [string, string]] : []),
+  ];
   return (
     <header className="sticky top-0 z-40 border-b-2 border-primary bg-background">
       <div className="bg-primary py-1.5 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground">Wholesale prices for resellers · Nationwide waybill</div>
@@ -35,7 +38,7 @@ export function Header() {
         <nav className="ml-8 hidden gap-6 md:flex">{links.map(([h, l]) => <Link key={l} href={h} className="eyebrow hover:text-accent">{l}</Link>)}</nav>
         <div className="ml-auto flex items-center gap-3">
           <CurrencyToggle />
-          <Link href={user ? "/account" : "/auth"} aria-label="Account" className="p-1"><User className="h-5 w-5" /></Link>
+          <Link href="/auth" aria-label="Account" className="p-1"><User className="h-5 w-5" /></Link>
           <Link href="/cart" aria-label="Cart" className="relative p-1"><ShoppingBag className="h-5 w-5" />{count > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">{count}</span>}</Link>
         </div>
       </div>
@@ -49,9 +52,9 @@ export function Footer() {
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-4">
         <div className="md:col-span-2"><Logo inverted /><p className="mt-4 max-w-sm text-sm opacity-70">Trendy streetwear made in Nigeria. Baggy denim, heavyweight hoodies and more, at wholesale prices for resellers.</p></div>
         <div className="flex flex-col gap-2 text-sm"><span className="eyebrow mb-2 text-accent">Shop</span><Link href="/shop">All products</Link><Link href="/cart">Cart</Link></div>
-        <div className="flex flex-col gap-2 text-sm"><span className="eyebrow mb-2 text-accent">Info</span><Link href="/about">About</Link><Link href="/delivery">Delivery &amp; Pick-up</Link><Link href="/contact">Contact</Link><Link href="/account">My account</Link></div>
+        <div className="flex flex-col gap-2 text-sm"><span className="eyebrow mb-2 text-accent">Info</span><Link href="/about">About</Link><a href="/#delivery">Delivery &amp; Pick-up</a><Link href="/contact">Contact</Link><Link href="/auth">Log in</Link></div>
       </div>
-      <div className="border-t border-sidebar-border py-4 text-center text-xs opacity-60">© {new Date().getFullYear()} UNIK TRENDS. All rights reserved.</div>
+      <div className="border-t border-sidebar-border py-4 text-center text-xs opacity-60">© {new Date().getFullYear()} UNIK TRENDS · build-2026-10-21</div>
     </footer>
   );
 }

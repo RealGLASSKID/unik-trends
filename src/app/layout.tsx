@@ -1,8 +1,6 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
-import { AppProvider } from "@/lib/app";
-import { Header, Footer, WhatsAppButton } from "@/components/Chrome";
-import { PwaRegister } from "@/components/PwaRegister";
+import { Providers } from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "UNIK TRENDS | Wholesale Streetwear",
@@ -48,15 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <body>
-        <AppProvider>
-          <div className="flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
-          <WhatsAppButton />
-          <PwaRegister />
-        </AppProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -1,13 +1,22 @@
-import { initializeApp, getApps } from "firebase/app";
+"use client";
+
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-const app = getApps()[0] ?? initializeApp({
+const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "missing",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "missing",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-});
+};
+
+function getFirebaseApp() {
+  if (getApps().length) return getApp();
+  return initializeApp(firebaseConfig);
+}
+
+const app = getFirebaseApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app);

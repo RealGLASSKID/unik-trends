@@ -24,6 +24,7 @@ import {
   Star,
   Users,
   Bell,
+  Mail,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import {
@@ -45,12 +46,14 @@ const NAV = [
   ["Overview", LayoutDashboard],
   ["Products", Package],
   ["Orders", ShoppingCart],
+  ["Messages", Mail],
   ["Customers", Users],
   ["Team", ShieldCheck],
   ["Settings", Cog],
 ] as const;
 type Tab = (typeof NAV)[number][0];
 type Draft = Omit<Product, "id"> & { id?: string };
+type Msg = { id: string; name: string; email: string; phone: string; message: string; createdAt: number; read?: boolean; status?: string };
 type Customer = {
   id: string;
   name?: string;
@@ -99,6 +102,7 @@ export default function Admin() {
   const [tab, setTab] = useState<Tab>("Overview");
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [admins, setAdmins] = useState<string[]>([]);
   const [newAdmin, setNewAdmin] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -106,7 +110,7 @@ export default function Admin() {
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string[]>([]);
-  const [sent, setSent] = useState(false);
+  const [sent, setSent] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [orderStatus, setOrderStatus] = useState<string>("All");
   const [orderSearch, setOrderSearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
@@ -120,6 +124,18 @@ export default function Admin() {
 
   useEffect(() => setS(settings), [settings]);
 
+  // While waiting for email verification, poll Firebase so admin unlocks without manual refresh
+  useEffect(() => {
+    if (!user || user.emailVerified || isAdmin) return;
+    const t = setInterval(async () => {
+      try {
+        await user.reload();
+        if (user.emailVerified) window.location.reload();
+      } catch {}
+    }, 4000);
+    return () => clearInterval(t);
+  }, [user, isAdmin]);
+
   useEffect(() => {
     if (!isAdmin) return;
     const a = onSnapshot(collection(db, "orders"), (x) =>
@@ -132,6 +148,13 @@ export default function Admin() {
     const b = onSnapshot(collection(db, "users"), (x) =>
       setCustomers(x.docs.map((d) => ({ id: d.id, ...d.data() }) as Customer))
     );
+    const m = onSnapshot(collection(db, "messages"), (x) =>
+      setMessages(
+        x.docs
+          .map((d) => ({ id: d.id, ...d.data() }) as Msg)
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      )
+    );
     const c = isOwner
       ? onSnapshot(collection(db, "admins"), (x) =>
           setAdmins(x.docs.map((d) => d.id))
@@ -140,6 +163,7 @@ export default function Admin() {
     return () => {
       a();
       b();
+      m();
       c();
     };
   }, [isAdmin, isOwner]);
@@ -192,6 +216,10 @@ export default function Admin() {
   const unreadCount = useMemo(
     () => orders.filter((o) => !seenOrderIds.has(o.id)).length,
     [orders, seenOrderIds]
+  );
+  const unreadMessages = useMemo(
+    () => messages.filter((m) => !m.read).length,
+    [messages]
   );
 
   const markOrdersSeen = () => {
@@ -312,31 +340,97 @@ export default function Admin() {
   }
 
   if (!isAdmin) {
+    const adminEmailSet = Boolean(ADMIN_EMAIL);
+    const emailMatches =
+      !!user?.email && !!ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL;
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <h1 className="text-5xl">Admins only</h1>
-        <p className="mt-3 text-muted-foreground">
-          {!user
-            ? "Log in with an admin email."
-            : !user.emailVerified
-              ? "Verify your email first, then refresh this page. Admin access needs a verified email."
-              : "This account is not an admin."}
-        </p>
-        {user && !user.emailVerified && (
-          <button
-            className="btn btn-accent mt-6"
-            disabled={sent}
-            onClick={() =>
-              sendEmailVerification(user).then(() => setSent(true))
-            }
-          >
-            {sent ? "Verification email sent" : "Send verification email"}
-          </button>
-        )}
-        {!user && (
-          <Link href="/auth?next=/admin" className="btn mt-6">
-            Log in
-          </Link>
+        {!user ? (
+          <>
+            <p className="mt-3 text-muted-foreground">
+              Log in with the owner email set in <code className="text-xs">NEXT_PUBLIC_ADMIN_EMAIL</code>.
+            </p>
+            <Link href="/auth?next=/admin" className="btn mt-6">
+              Log in
+            </Link>
+          </>
+        ) : (
+          <div className="mt-4 grid gap-3 text-left text-sm">
+            <p className="rounded border-2 border-primary bg-muted/40 p-3">
+              Signed in as <b>{user.email}</b>
+              <br />
+              Email verified: <b>{user.emailVerified ? "Yes" : "No"}</b>
+              <br />
+              Matches admin email: <b>{emailMatches ? "Yes" : "No"}</b>
+              {!adminEmailSet && (
+                <>
+                  <br />
+                  <span className="text-destructive">
+                    NEXT_PUBLIC_ADMIN_EMAIL is empty — set it in .env.local to your email, then restart the dev server.
+                  </span>
+                </>
+              )}
+              {adminEmailSet && !emailMatches && (
+                <>
+                  <br />
+                  <span className="text-muted-foreground">
+                    Expected owner: <b>{ADMIN_EMAIL}</b>. Log out and sign in with that address, or add this email under Admin → Team (after the owner is in).
+                  </span>
+                </>
+              )}
+            </p>
+
+            {!user.emailVerified && (
+              <>
+                <p className="text-muted-foreground">
+                  Firebase requires a verified email for admin. Click below, open the email (check Spam), click the link, then come back — this page checks automatically.
+                </p>
+                <button
+                  className="btn btn-accent"
+                  disabled={sent === "sending" || sent === "sent"}
+                  onClick={async () => {
+                    setSent("sending");
+                    try {
+                      await sendEmailVerification(user);
+                      setSent("sent");
+                    } catch (e) {
+                      setSent("error");
+                      alert((e as Error).message);
+                    }
+                  }}
+                >
+                  {sent === "sending"
+                    ? "Sending…"
+                    : sent === "sent"
+                      ? "Email sent — check inbox / spam"
+                      : "Send verification email"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={async () => {
+                    await user.reload();
+                    // force auth listener to re-evaluate
+                    window.location.reload();
+                  }}
+                >
+                  I already verified — refresh status
+                </button>
+              </>
+            )}
+
+            {user.emailVerified && !emailMatches && !isOwner && (
+              <p className="text-muted-foreground">
+                Your email is verified, but it is not the owner and is not on the admins list. Ask the owner to add you in Admin → Team, or set{" "}
+                <code className="text-xs">NEXT_PUBLIC_ADMIN_EMAIL={user.email}</code> in .env.local and restart.
+              </p>
+            )}
+
+            <Link href="/shop" className="btn btn-ghost">
+              Back to shop
+            </Link>
+          </div>
         )}
       </div>
     );
@@ -441,6 +535,11 @@ export default function Admin() {
               {t === "Orders" && unreadCount > 0 && (
                 <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1 text-[10px] text-accent-foreground">
                   {unreadCount}
+                </span>
+              )}
+              {t === "Messages" && unreadMessages > 0 && (
+                <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1 text-[10px] text-accent-foreground">
+                  {unreadMessages}
                 </span>
               )}
             </button>
@@ -1025,6 +1124,73 @@ export default function Admin() {
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {tab === "Messages" && (
+          <div className="mt-6">
+            <p className="mb-4 text-sm text-muted-foreground">
+              Messages from the contact form. Mark as read when you have replied.
+            </p>
+            {messages.length === 0 ? (
+              <p className="text-muted-foreground">No messages yet.</p>
+            ) : (
+              <ul className="grid gap-3">
+                {messages.map((m) => (
+                  <li
+                    key={m.id}
+                    className={`border-2 border-primary p-4 text-sm ${m.read ? "opacity-60" : ""}`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="font-bold">{m.name}</p>
+                        <p className="text-muted-foreground">
+                          {m.email} · {m.phone}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {m.createdAt ? new Date(m.createdAt).toLocaleString() : ""}
+                      </span>
+                    </div>
+                    <p className="mt-3 whitespace-pre-wrap">{m.message}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {!m.read && (
+                        <button
+                          type="button"
+                          className="chip"
+                          onClick={() =>
+                            updateDoc(doc(db, "messages", m.id), { read: true, status: "read" })
+                          }
+                        >
+                          Mark read
+                        </button>
+                      )}
+                      <a
+                        className="btn btn-wa !py-1.5 text-xs"
+                        href={`https://wa.me/${String(m.phone).replace(/\D/g, "")}?text=${encodeURIComponent("Hi " + m.name + ", this is UNIK TRENDS regarding your message.")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        WhatsApp
+                      </a>
+                      <a className="chip" href={`mailto:${m.email}`}>
+                        Email
+                      </a>
+                      <button
+                        type="button"
+                        className="chip"
+                        onClick={() =>
+                          confirm("Delete this message?") &&
+                          deleteDoc(doc(db, "messages", m.id))
+                        }
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 

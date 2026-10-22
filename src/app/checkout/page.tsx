@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addDoc, collection, doc, setDoc, updateDoc } from "firebase/firestore";
@@ -10,7 +10,6 @@ import {
   fmt,
   openPaystack,
   useApp,
-  waLink,
   type OrderType,
   type PaymentMethod,
 } from "@/lib/app";
@@ -45,15 +44,6 @@ export default function Checkout() {
     total("USD") + (waybillFee > 0 ? waybillFee / (settings.rate || 1500) : 0);
 
   const paystackReady = Boolean(PAYSTACK_PUBLIC_KEY);
-
-  const summaryLines = useMemo(
-    () =>
-      items.map(
-        (i) =>
-          `• ${i.qty}× ${i.name} (${[i.size, i.color].filter(Boolean).join(", ")})`
-      ),
-    [items]
-  );
 
   if (!items.length)
     return (
@@ -115,13 +105,9 @@ export default function Checkout() {
     ...extra,
   });
 
-  const afterSuccess = (orderId: string, type: OrderType) => {
+  const afterSuccess = (orderId: string, _type: OrderType) => {
     clear();
-    if (type === "booking") {
-      const text = `Hi UNIK TRENDS, I booked order #${orderId.slice(0, 6)} for pick-up.\n\n${summaryLines.join("\n")}\n\nTotal: ${fmt(subtotalNgn, "NGN")}\nName: ${f.name}\nPhone: ${f.phone}\n\nI'll come to the shop to pay and collect.`;
-      window.open(waLink(settings.whatsapp, text), "_blank");
-    }
-    router.push(`/account?placed=${orderId}`);
+    router.push(`/shop?booked=${orderId}`);
   };
 
   const submitBooking = async () => {
@@ -160,7 +146,7 @@ export default function Checkout() {
         collection(db, "orders"),
         buildOrderPayload({
           orderType: "order",
-          paymentMethod: paystackReady ? "paystack" : "whatsapp",
+          paymentMethod: paystackReady ? "paystack" : "pay_at_shop",
           paymentStatus: "unpaid",
           status: "Pending",
         })
@@ -190,25 +176,22 @@ export default function Checkout() {
               });
             } catch {}
             clear();
-            router.push(`/account?placed=${ref.id}&paid=1`);
+            router.push(`/shop?ordered=${ref.id}&paid=1`);
           },
           onClose: () => {
             setBusy(false);
             setErr(
-              "Payment window closed. Your order is saved as Pending — you can pay later or chat on WhatsApp."
+              "Payment window closed. Your order is saved as Pending — complete payment later or wait for our team to confirm."
             );
-            // Keep cart? User might retry. Leave order in Pending.
-            router.push(`/account?placed=${ref.id}`);
+            router.push(`/shop?ordered=${ref.id}`);
           },
         });
         return;
       }
 
-      // No Paystack key yet — WhatsApp fallback
-      const text = `Hi UNIK TRENDS, I placed order #${ref.id.slice(0, 6)}.\n\n${summaryLines.join("\n")}\n\nSubtotal: ${fmt(subtotalNgn, "NGN")}${waybillFee ? `\nWaybill fee: ${fmt(waybillFee, "NGN")}` : ""}\nTotal: ${fmt(grandNgn, "NGN")}\nName: ${f.name}\nPhone: ${f.phone}\nDelivery: ${f.delivery}${f.address ? `\nAddress: ${f.address}` : ""}${f.notes ? `\nNotes: ${f.notes}` : ""}\n\nPlease send payment details.`;
+      // No Paystack key yet — order saved; admin follows up with the customer
       clear();
-      window.open(waLink(settings.whatsapp, text), "_blank");
-      router.push(`/account?placed=${ref.id}`);
+      router.push(`/shop?ordered=${ref.id}`);
     } catch (e) {
       setErr((e as Error).message);
       setBusy(false);
@@ -259,8 +242,7 @@ export default function Checkout() {
             <Package className="h-6 w-6" />
             <span className="font-display text-lg">Order online</span>
             <span className="text-xs text-muted-foreground">
-              Pay{paystackReady ? " with Paystack" : " (Paystack activates when key is set)"} and
-              choose waybill or pick-up.
+              Pay{paystackReady ? " with Paystack" : " online when Paystack is enabled"} and choose waybill or pick-up.
             </span>
           </button>
         </div>
@@ -346,8 +328,8 @@ export default function Checkout() {
 
         {orderType === "order" && !paystackReady && (
           <p className="border-2 border-border bg-muted/50 p-3 text-xs text-muted-foreground">
-            Online Paystack payment is not active yet (key not in env). Your order will still be
-            created and WhatsApp will open so you can complete payment with the owner.
+            Online Paystack is not active yet. Your order is still saved as Pending — our team will
+            confirm payment details with you using the phone number you provide.
           </p>
         )}
 
@@ -360,7 +342,7 @@ export default function Checkout() {
               ? "Book for pick-up"
               : paystackReady
                 ? `Pay ${fmt(grandNgn, "NGN")} with Paystack`
-                : "Place order & chat on WhatsApp"}
+                : "Place order"}
         </button>
       </form>
 
@@ -398,7 +380,7 @@ export default function Checkout() {
             ? "Payment at the shop when you collect."
             : paystackReady
               ? "Secure card / transfer via Paystack."
-              : "Payment arranged on WhatsApp until Paystack is enabled."}
+              : "Order saved as pending until Paystack is enabled or admin confirms payment."}
         </p>
       </aside>
     </div>

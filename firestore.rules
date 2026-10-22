@@ -1,10 +1,18 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
-    // Owner = the email in NEXT_PUBLIC_ADMIN_EMAIL (change below). Other admins are added from Admin > Team.
-    // Admins must have a verified email, so nobody can claim an admin email without owning it.
-    function owner() { return request.auth != null && request.auth.token.email_verified == true && request.auth.token.email.lower() == 'owner@example.com'; }
-    function admin() { return owner() || (request.auth != null && request.auth.token.email_verified == true && exists(/databases/$(db)/documents/admins/$(request.auth.token.email.lower()))); }
+    // Change owner@example.com to the real owner email (same as NEXT_PUBLIC_ADMIN_EMAIL).
+    function owner() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() == 'owner@example.com';
+    }
+    function admin() {
+      return owner()
+        || (request.auth != null
+            && request.auth.token.email_verified == true
+            && exists(/databases/$(db)/documents/admins/$(request.auth.token.email.lower())));
+    }
 
     match /admins/{email} {
       allow get: if request.auth != null && request.auth.token.email.lower() == email;
@@ -12,19 +20,28 @@ service cloud.firestore {
     }
     match /products/{id} { allow read: if true; allow write: if admin(); }
     match /settings/{id} { allow read: if true; allow write: if admin(); }
-    match /users/{uid} { allow read: if request.auth != null && request.auth.uid == uid || admin(); allow write: if request.auth != null && request.auth.uid == uid; }
+    match /users/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || admin());
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
     match /orders/{id} {
       allow create: if request.auth != null
         && request.resource.data.userId == request.auth.uid
         && (request.resource.data.status == 'Pending' || request.resource.data.status == 'Booked');
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || admin());
-      // Customer may mark their own order paid after Paystack success; admin can update anything
       allow update: if admin()
         || (request.auth != null
             && resource.data.userId == request.auth.uid
             && request.resource.data.userId == resource.data.userId
             && request.resource.data.paymentStatus == 'paid'
             && resource.data.paymentStatus == 'unpaid');
+    }
+    match /messages/{id} {
+      allow create: if request.resource.data.keys().hasAll(['name', 'email', 'phone', 'message', 'createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.email is string
+        && request.resource.data.message is string;
+      allow read, update, delete: if admin();
     }
   }
 }

@@ -95,7 +95,7 @@ export const DEFAULT_SETTINGS: Settings = {
   deliveryInfo:
     "Waybill: we send to any state via trusted park/logistics partners. Waybill fee is paid online with your order (or on pickup if you book).\nPick-up: collect your order in person at our Lagos workshop after confirmation.\nOther: chat with us on WhatsApp to arrange a custom option.",
   waybillFeeNgn: 2500,
-  shopAddress: "Lagos workshop — address confirmed on WhatsApp after booking",
+  shopAddress: "Tejuosho (Tejuoso) Market Plaza, Yaba, Lagos — production & pick-up",
 };
 export const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "").toLowerCase();
 export const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
@@ -189,8 +189,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [items, currency, loaded]);
 
-  const isOwner =
-    !!user?.emailVerified && !!ADMIN_EMAIL && user.email?.toLowerCase() === ADMIN_EMAIL;
+  const isOwner = !!user && !!ADMIN_EMAIL && user.email?.toLowerCase() === ADMIN_EMAIL;
   const value = useMemo<Ctx>(
     () => ({
       user,
