@@ -195,7 +195,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user,
       authLoading,
       isOwner,
-      isAdmin: isOwner || (!!user?.emailVerified && listed),
+      isAdmin: isOwner || (!!user && listed),
       allProducts: products,
       currency,
       setCurrency,

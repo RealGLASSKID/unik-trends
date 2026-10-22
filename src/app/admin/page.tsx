@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { sendEmailVerification } from "firebase/auth";
 import {
   addDoc,
   collection,
@@ -110,8 +109,7 @@ export default function Admin() {
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string[]>([]);
-  const [sent, setSent] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [orderStatus, setOrderStatus] = useState<string>("All");
+    const [orderStatus, setOrderStatus] = useState<string>("All");
   const [orderSearch, setOrderSearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
@@ -123,18 +121,6 @@ export default function Admin() {
   const knownOrdersRef = useRef<Set<string> | null>(null);
 
   useEffect(() => setS(settings), [settings]);
-
-  // While waiting for email verification, poll Firebase so admin unlocks without manual refresh
-  useEffect(() => {
-    if (!user || user.emailVerified || isAdmin) return;
-    const t = setInterval(async () => {
-      try {
-        await user.reload();
-        if (user.emailVerified) window.location.reload();
-      } catch {}
-    }, 4000);
-    return () => clearInterval(t);
-  }, [user, isAdmin]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -340,97 +326,22 @@ export default function Admin() {
   }
 
   if (!isAdmin) {
-    const adminEmailSet = Boolean(ADMIN_EMAIL);
-    const emailMatches =
-      !!user?.email && !!ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL;
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <h1 className="text-5xl">Admins only</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {!user
+            ? "Log in with the owner email and password (Auth page → Admin login)."
+            : `Signed in as ${user.email}. This account is not an admin. Set NEXT_PUBLIC_ADMIN_EMAIL to this email, or ask the owner to add you under Team.`}
+        </p>
         {!user ? (
-          <>
-            <p className="mt-3 text-muted-foreground">
-              Log in with the owner email set in <code className="text-xs">NEXT_PUBLIC_ADMIN_EMAIL</code>.
-            </p>
-            <Link href="/auth?next=/admin" className="btn mt-6">
-              Log in
-            </Link>
-          </>
+          <Link href="/auth?next=/admin" className="btn mt-6">
+            Admin log in
+          </Link>
         ) : (
-          <div className="mt-4 grid gap-3 text-left text-sm">
-            <p className="rounded border-2 border-primary bg-muted/40 p-3">
-              Signed in as <b>{user.email}</b>
-              <br />
-              Email verified: <b>{user.emailVerified ? "Yes" : "No"}</b>
-              <br />
-              Matches admin email: <b>{emailMatches ? "Yes" : "No"}</b>
-              {!adminEmailSet && (
-                <>
-                  <br />
-                  <span className="text-destructive">
-                    NEXT_PUBLIC_ADMIN_EMAIL is empty — set it in .env.local to your email, then restart the dev server.
-                  </span>
-                </>
-              )}
-              {adminEmailSet && !emailMatches && (
-                <>
-                  <br />
-                  <span className="text-muted-foreground">
-                    Expected owner: <b>{ADMIN_EMAIL}</b>. Log out and sign in with that address, or add this email under Admin → Team (after the owner is in).
-                  </span>
-                </>
-              )}
-            </p>
-
-            {!user.emailVerified && (
-              <>
-                <p className="text-muted-foreground">
-                  Firebase requires a verified email for admin. Click below, open the email (check Spam), click the link, then come back — this page checks automatically.
-                </p>
-                <button
-                  className="btn btn-accent"
-                  disabled={sent === "sending" || sent === "sent"}
-                  onClick={async () => {
-                    setSent("sending");
-                    try {
-                      await sendEmailVerification(user);
-                      setSent("sent");
-                    } catch (e) {
-                      setSent("error");
-                      alert((e as Error).message);
-                    }
-                  }}
-                >
-                  {sent === "sending"
-                    ? "Sending…"
-                    : sent === "sent"
-                      ? "Email sent — check inbox / spam"
-                      : "Send verification email"}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={async () => {
-                    await user.reload();
-                    // force auth listener to re-evaluate
-                    window.location.reload();
-                  }}
-                >
-                  I already verified — refresh status
-                </button>
-              </>
-            )}
-
-            {user.emailVerified && !emailMatches && !isOwner && (
-              <p className="text-muted-foreground">
-                Your email is verified, but it is not the owner and is not on the admins list. Ask the owner to add you in Admin → Team, or set{" "}
-                <code className="text-xs">NEXT_PUBLIC_ADMIN_EMAIL={user.email}</code> in .env.local and restart.
-              </p>
-            )}
-
-            <Link href="/shop" className="btn btn-ghost">
-              Back to shop
-            </Link>
-          </div>
+          <Link href="/auth" className="btn mt-6 btn-ghost">
+            Switch account
+          </Link>
         )}
       </div>
     );

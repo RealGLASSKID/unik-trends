@@ -5,7 +5,7 @@ service cloud.firestore {
     function owner() {
       return request.auth != null
         && request.auth.token.email != null
-        && request.auth.token.email.lower() == 'owner@example.com';
+        && request.auth.token.email.lower() == 'glasskid01@.com';
     }
     function admin() {
       return owner()
