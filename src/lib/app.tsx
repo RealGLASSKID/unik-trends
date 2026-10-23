@@ -268,7 +268,7 @@ export async function uploadImage(file: File): Promise<string> {
   if (!r.ok) {
     const m: string = j.error?.message ?? "Image upload failed";
     if (/whitelist|unsigned/i.test(m)) throw new Error('Cloudinary rejected the upload: set your upload preset "Signing mode" to Unsigned, then save it.');
-    if (/preset/i.test(m) && /not found|invalid/i.test(m)) throw new Error("Cloudinary says the upload preset name is wrong. Check NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET.");
+    if (/preset/i.test(m) && /not found|invalid/i.test(m)) throw new Error(`Cloudinary cannot find preset "${preset}" in cloud "${cloud}". Make sure this cloud name is the account where you created the preset.`);
     if (/cloud/i.test(m) && /not found|invalid|disabled/i.test(m)) throw new Error("Cloudinary says the cloud name is wrong. Check NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME.");
     throw new Error(`Cloudinary: ${m}`);
   }
