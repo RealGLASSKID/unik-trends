@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
-import { LogOut, Menu, MessageCircle, ShoppingBag, ShieldCheck, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LogOut, Menu, MessageCircle, Moon, ShoppingBag, ShieldCheck, Sun, X } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { fmt, useApp, waLink } from "@/lib/app";
@@ -24,6 +24,27 @@ export function CurrencyToggle() {
   const { currency, setCurrency } = useApp();
   return <div className="flex border-2 border-primary text-xs font-bold" role="group" aria-label="Currency">{(["NGN", "USD"] as const).map((c) => <button key={c} onClick={() => setCurrency(c)} className={`px-2 py-1 ${currency === c ? "bg-primary text-primary-foreground" : ""}`}>{c === "NGN" ? "₦" : "$"}</button>)}</div>;
 }
+function ThemeToggle() {
+  const [dark, setDark] = useState(true);
+  useEffect(() => {
+    const stored = localStorage.getItem("unik-theme");
+    const preferDark = stored ? stored === "dark" : true;
+    setDark(preferDark);
+    document.documentElement.classList.toggle("dark", preferDark);
+  }, []);
+  const toggle = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("unik-theme", next ? "dark" : "light");
+  };
+  return (
+    <button type="button" onClick={toggle} className="p-1" aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}>
+      {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+    </button>
+  );
+}
+
 export function Header() {
   const { count, user, isAdmin, settings } = useApp();
   const [open, setOpen] = useState(false);
@@ -56,6 +77,7 @@ export function Header() {
               )}
             </div>
           )}
+          <ThemeToggle />
           <Link href="/cart" aria-label="Cart" className="relative p-1"><ShoppingBag className="h-5 w-5" />{count > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">{count}</span>}</Link>
         </div>
       </div>
@@ -85,7 +107,7 @@ export function ProductCard({ p }: { p: { id: string; name: string; images: stri
   return (
     <Link href={`/product/${p.id}`} className="group block">
       <div className="relative aspect-[4/5] overflow-hidden bg-muted">
-        {p.images[0] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={p.images[0]} alt={p.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />}
+        {p.images?.[0] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={p.images[0]} alt={p.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />}
         {p.featured && <span className="eyebrow absolute left-2 top-2 bg-accent px-2 py-1 text-accent-foreground">Trending</span>}
         {p.stock <= 0 && <span className="eyebrow absolute right-2 top-2 bg-primary px-2 py-1 text-primary-foreground">Sold out</span>}
       </div>

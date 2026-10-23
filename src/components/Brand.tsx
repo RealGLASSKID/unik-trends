@@ -61,29 +61,31 @@ export function GoogleButton({ label = "Sign up with Google", to = "/" }: { labe
 export function Welcome() {
   const [step, setStep] = useState<"welcome" | "signup">("welcome");
   return (
-    <div className="fixed inset-0 z-[90] grid overflow-auto bg-background md:grid-cols-2">
-      <div className="relative h-56 bg-primary md:h-auto">
+    <div className="fixed inset-0 z-[90] overflow-auto md:grid md:grid-cols-2">
+      {/* Image: full background on mobile, left column on desktop */}
+      <div className="pointer-events-none fixed inset-0 md:pointer-events-auto md:relative md:inset-auto">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/welcome.jpg" alt="Welcome to UNIK TRENDS" className="absolute inset-0 h-full w-full object-cover" onError={(e) => { const t = e.currentTarget; if (!t.src.endsWith("/images/hero.jpg")) t.src = "/images/hero.jpg"; }} />
+        <div className="absolute inset-0 bg-black/55 md:bg-black/20" />
       </div>
-      <div className="flex flex-col justify-center px-8 py-12 md:px-16">
+      <div className="relative z-10 flex min-h-full flex-col justify-center px-8 py-12 text-white md:bg-background md:px-16 md:text-foreground">
         <div className="flex items-baseline gap-2"><span className="font-display text-3xl">UNIK</span><span className="text-sm font-bold lowercase tracking-widest text-accent">trends</span></div>
         {step === "welcome" ? (
           <>
             <h1 className="mt-8 text-5xl leading-[0.95] md:text-7xl">Welcome to UNIK TRENDS</h1>
-            <p className="mt-5 max-w-md text-muted-foreground">Trendy Nigerian streetwear, made by us and sold at wholesale prices. Browse baggy jeans, hoodies and sets for men and women, then order online or book and pay at our shop in Tejuosho, Yaba.</p>
+            <p className="mt-5 max-w-md text-white/80 md:text-muted-foreground">Trendy Nigerian streetwear, made by us and sold at wholesale prices. Browse baggy jeans, hoodies and sets for men and women, then order online or book and pay at our shop in Tejuosho, Yaba.</p>
             <ul className="mt-5 grid gap-1 text-sm font-bold"><li>✓ Factory-direct wholesale prices in ₦ and $</li><li>✓ Order online or book and pay at the shop</li><li>✓ Waybill to any state, or pick up in person</li></ul>
             <button className="btn btn-accent mt-8 w-fit" onClick={() => setStep("signup")}>Get started</button>
           </>
         ) : (
           <>
             <h1 className="mt-8 text-5xl leading-[0.95] md:text-6xl">Create your account</h1>
-            <p className="mt-4 max-w-md text-sm text-muted-foreground">One tap with Google. We will remember you on this device, so you only sign up once.</p>
+            <p className="mt-4 max-w-md text-sm text-white/80 md:text-muted-foreground">One tap with Google. We will remember you on this device, so you only sign up once.</p>
             <div className="mt-8 max-w-sm"><GoogleButton label="Sign up with Google" /></div>
-            <button className="mt-6 w-fit text-xs uppercase tracking-wider text-muted-foreground underline" onClick={() => setStep("welcome")}>Back</button>
+            <button className="mt-6 w-fit text-xs uppercase tracking-wider text-white/70 underline md:text-muted-foreground" onClick={() => setStep("welcome")}>Back</button>
           </>
         )}
-        <a href="/auth" className="mt-12 w-fit text-xs uppercase tracking-wider text-muted-foreground underline">Admin login</a>
+        <a href="/auth" className="mt-12 w-fit text-xs uppercase tracking-wider text-white/70 underline md:text-muted-foreground">Admin login</a>
       </div>
     </div>
   );

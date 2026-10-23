@@ -24,5 +24,11 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    const stored = localStorage.getItem("unik-theme");
+    const dark = stored ? stored === "dark" : true; // default dark
+    document.documentElement.classList.toggle("dark", dark);
+  }, []);
+
   return <AppProvider><Shell>{children}</Shell><PwaRegister /></AppProvider>;
 }

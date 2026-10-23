@@ -28,6 +28,7 @@ import {
 import { db } from "@/lib/firebase";
 import {
   ADMIN_EMAILS,
+  normalizeProduct,
   variantsOf,
   CATEGORIES,
   DEFAULT_SETTINGS,
@@ -84,15 +85,16 @@ const blank: Draft = {
 const SIZES = ["S", "M", "L", "XL", "XXL", "XXXL", "26", "28", "30", "32", "34", "36", "38", "40"];
 function Picker({ label, options, value, onChange, hint, dots }: { label: string; options: string[]; value: string[]; onChange: (v: string[]) => void; hint: string; dots?: boolean }) {
   const [t, setT] = useState("");
-  const all = [...options, ...value.filter((v) => !options.some((o) => o.toLowerCase() === v.toLowerCase()))];
-  const toggle = (o: string) => onChange(value.includes(o) ? value.filter((x) => x !== o) : [...value, o]);
-  const add = () => { const v = t.trim(); if (v && !value.some((x) => x.toLowerCase() === v.toLowerCase())) onChange([...value, v]); setT(""); };
+  const val = value || [];
+  const all = [...options, ...val.filter((v) => !options.some((o) => o.toLowerCase() === v.toLowerCase()))];
+  const toggle = (o: string) => onChange(val.includes(o) ? val.filter((x) => x !== o) : [...val, o]);
+  const add = () => { const v = t.trim(); if (v && !val.some((x) => x.toLowerCase() === v.toLowerCase())) onChange([...val, v]); setT(""); };
   return (
     <div className="grid gap-2">
       <p className="text-xs font-bold uppercase">{label} <span className="font-normal normal-case text-muted-foreground">· {hint}</span></p>
       <div className="flex flex-wrap gap-2">
         {all.map((o) => (
-          <button type="button" key={o} onClick={() => toggle(o)} className={`chip flex items-center gap-1.5 ${value.includes(o) ? "on" : ""}`}>
+          <button type="button" key={o} onClick={() => toggle(o)} className={`chip flex items-center gap-1.5 ${val.includes(o) ? "on" : ""}`}>
             {dots && DOT[o.toLowerCase()] && <span className="h-3 w-3 rounded-full border border-neutral-400" style={{ background: DOT[o.toLowerCase()] }} />}{o}
           </button>
         ))}
@@ -394,16 +396,31 @@ export default function Admin() {
       if (!variants.length) throw new Error("Add at least one colour.");
       if (variants.some((v) => !v.images.length)) throw new Error("Every colour needs at least one photo.");
       const clean = variants.map((v) => ({ color: v.color, images: v.images, stock: Number(v.stock) || 0, ...(v.priceNgn ? { priceNgn: v.priceNgn } : {}), ...(v.priceUsd ? { priceUsd: v.priceUsd } : {}) }));
-      const { id, ...data } = {
-        ...draft,
+      const priceNgn = Number(draft.priceNgn) || 0;
+      const priceUsd =
+        Number(draft.priceUsd) ||
+        Math.round((priceNgn / (settings.rate || 1)) * 100) / 100;
+      const sizes = Array.isArray(draft.sizes) ? draft.sizes.map(String) : [];
+      const { id, ...rest } = draft;
+      const data = {
+        name: String(draft.name || "").trim() || "Untitled",
+        description: String(draft.description || ""),
+        category: String(draft.category || "Other").trim(),
+        gender: String(draft.gender || "unisex"),
+        sizes,
         variants: clean,
         colors: clean.map((v) => v.color),
         images: clean[0]!.images,
         stock: clean.reduce((n, v) => n + v.stock, 0),
-        priceUsd:
-          draft.priceUsd ||
-          Math.round((draft.priceNgn / (settings.rate || 1)) * 100) / 100,
+        minQty: Number(draft.minQty) || 1,
+        priceNgn,
+        priceUsd,
+        featured: !!draft.featured,
+        hidden: !!draft.hidden,
       };
+      if (!data.name || data.name === "Untitled") throw new Error("Enter a product name.");
+      if (priceNgn <= 0) throw new Error("Enter a price in NGN.");
+      if (!sizes.length) throw new Error("Pick at least one size.");
       if (id) await setDoc(doc(db, "products", id), data);
       else await addDoc(collection(db, "products"), data);
       setDraft(null);
@@ -777,7 +794,7 @@ export default function Admin() {
                       />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={p.images[0]}
+                        src={p.images?.[0] || "/logo.png"}
                         alt=""
                         className="h-14 w-11 bg-muted object-cover"
                       />
@@ -866,7 +883,10 @@ export default function Admin() {
                       >
                         <Copy className="h-4 w-4" />
                       </button>
-                      <button className="chip" onClick={() => setDraft({ ...p, variants: variantsOf(p).map((v) => ({ ...v })) })}>
+                      <button className="chip" onClick={() => {
+                          const n = normalizeProduct(p.id, p as unknown as Record<string, unknown>);
+                          setDraft({ ...n, id: n.id, variants: variantsOf(n).map((v) => ({ ...v })) });
+                        }}>
                         Edit
                       </button>
                       <button
@@ -1005,6 +1025,16 @@ export default function Admin() {
                         <option key={x}>{x}</option>
                       ))}
                     </select>
+                    <input
+                      className="field max-w-xs"
+                      placeholder="Note to customer (optional)"
+                      defaultValue={(o as { statusNote?: string }).statusNote || ""}
+                      onBlur={(e) => {
+                        const v = e.target.value.trim();
+                        if (v !== ((o as { statusNote?: string }).statusNote || ""))
+                          updateDoc(doc(db, "orders", o.id), { statusNote: v });
+                      }}
+                    />
                     <a
                       className="btn btn-wa !py-2"
                       target="_blank"

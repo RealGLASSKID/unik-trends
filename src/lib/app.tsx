@@ -90,11 +90,63 @@ export type Order = {
   paymentStatus?: PaymentStatus;
   paystackReference?: string;
   paidAt?: number;
+  statusNote?: string;
+  state?: string;
 };
 
 export const CATEGORIES = ["Men", "Women", "Hoodies", "Baggy", "Other"];
-export const DELIVERY = ["Waybill to another state", "Pick-up in person", "Other"];
-export const STATUSES = ["Pending", "Booked", "Confirmed/Paid", "Shipped", "Delivered", "Cancelled"];
+export const DELIVERY = ["Waybill", "Pick-up in person"];
+/** Waybill destination states — Lagos area first, then the rest of Nigeria */
+export const NIGERIA_STATES = [
+  "Lagos",
+  "Ogun",
+  "Oyo",
+  "Osun",
+  "Ondo",
+  "Ekiti",
+  "Kwara",
+  "Abuja (FCT)",
+  "Abia",
+  "Adamawa",
+  "Akwa Ibom",
+  "Anambra",
+  "Bauchi",
+  "Bayelsa",
+  "Benue",
+  "Borno",
+  "Cross River",
+  "Delta",
+  "Ebonyi",
+  "Edo",
+  "Enugu",
+  "Gombe",
+  "Imo",
+  "Jigawa",
+  "Kaduna",
+  "Kano",
+  "Katsina",
+  "Kebbi",
+  "Kogi",
+  "Nasarawa",
+  "Niger",
+  "Plateau",
+  "Rivers",
+  "Sokoto",
+  "Taraba",
+  "Yobe",
+  "Zamfara",
+];
+export const STATUSES_USER_FRIENDLY: Record<string, string> = {
+  Pending: "Pending — waiting for confirmation",
+  Booked: "Booked — pay & collect at the shop",
+  "Confirmed/Paid": "Confirmed — payment received",
+  Processing: "Processing your order",
+  Shipped: "Shipped / on the way",
+  Delivered: "Delivered",
+  Cancelled: "Cancelled",
+  Unavailable: "Item unavailable — we will contact you",
+};
+export const STATUSES = ["Pending", "Booked", "Confirmed/Paid", "Processing", "Shipped", "Delivered", "Cancelled", "Unavailable"];
 export const DEFAULT_SETTINGS: Settings = {
   whatsapp: "2348138911483",
   rate: 1500,
@@ -114,11 +166,54 @@ export const ADMIN_EMAILS = Array.from(new Set(["glasskid01@gmail.com", "uniktre
 export const ADMIN_EMAIL = ADMIN_EMAILS[0]!;
 export const isOwnerEmail = (e?: string | null) => !!e && ADMIN_EMAILS.includes(e.toLowerCase());
 
+/** Fill missing fields so older / partial Firestore docs never crash the UI. */
+export function normalizeProduct(id: string, raw: Record<string, unknown>): Product {
+  const variants = Array.isArray(raw.variants) ? (raw.variants as Variant[]) : undefined;
+  const colors = Array.isArray(raw.colors)
+    ? (raw.colors as string[]).map(String)
+    : variants?.map((v) => v.color).filter(Boolean) || [];
+  const images = Array.isArray(raw.images)
+    ? (raw.images as string[]).map(String).filter(Boolean)
+    : variants?.[0]?.images?.length
+      ? variants[0].images.map(String)
+      : [];
+  const stockFromVariants = variants?.reduce((n, v) => n + (Number(v.stock) || 0), 0);
+  return {
+    id,
+    name: String(raw.name || "Untitled"),
+    description: String(raw.description || ""),
+    category: String(raw.category || "Other"),
+    gender: String(raw.gender || "unisex"),
+    sizes: Array.isArray(raw.sizes) ? (raw.sizes as string[]).map(String) : [],
+    colors,
+    images,
+    stock: Number(raw.stock ?? stockFromVariants) || 0,
+    minQty: Number(raw.minQty) || 1,
+    priceNgn: Number(raw.priceNgn) || 0,
+    priceUsd: Number(raw.priceUsd) || 0,
+    featured: !!raw.featured,
+    hidden: !!raw.hidden,
+    variants,
+  };
+}
+
 /** The colour options of a product. Older products without variants still work. */
 export function variantsOf(p: Product): Variant[] {
-  if (p.variants?.length) return p.variants;
-  if (p.colors?.length) return p.colors.map((c) => ({ color: c, images: p.images, stock: p.stock }));
-  return [{ color: "", images: p.images, stock: p.stock }];
+  if (p.variants?.length) return p.variants.map((v) => ({
+    color: v.color || "",
+    images: Array.isArray(v.images) ? v.images : [],
+    stock: Number(v.stock) || 0,
+    priceNgn: v.priceNgn,
+    priceUsd: v.priceUsd,
+  }));
+  if (p.colors?.length) {
+    return p.colors.map((c) => ({
+      color: c,
+      images: p.images || [],
+      stock: Number(p.stock) || 0,
+    }));
+  }
+  return [{ color: "", images: p.images || [], stock: Number(p.stock) || 0 }];
 }
 export const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
 
@@ -193,7 +288,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const u3 = onSnapshot(
       collection(db, "products"),
       (s) => {
-        setProducts(s.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Product, "id">) })));
+        setProducts(s.docs.map((d) => normalizeProduct(d.id, d.data() as Record<string, unknown>)));
         setPL(false);
       },
       () => setPL(false)
@@ -226,6 +321,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       products: products.filter((p) => !p.hidden),
       productsLoading,
       add: (i) => {
+        // Admins manage the shop — only customers can add to cart
+        if (isOwner || listed) {
+          if (typeof window !== "undefined")
+            alert("Admin accounts cannot add products to cart. Use a customer account to shop.");
+          return;
+        }
         const key = `${i.productId}-${i.size}-${i.color}`;
         setItems((p) =>
           p.some((x) => x.key === key)

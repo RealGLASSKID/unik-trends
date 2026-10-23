@@ -10,11 +10,12 @@ import { DOT } from "@/components/VariantEditor";
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
-  const { products, productsLoading, currency, add, settings } = useApp();
+  const { products: shopProducts, allProducts, productsLoading, currency, add, settings, isAdmin } = useApp();
   const router = useRouter();
-  const p = products.find((x) => x.id === id);
+  const catalog = allProducts?.length ? allProducts : shopProducts;
+  const p = catalog.find((x) => x.id === id);
   const [img, setImg] = useState(0); const [size, setSize] = useState(""); const [color, setColor] = useState(""); const [qty, setQty] = useState(2);
-  useEffect(() => { if (p) { setQty(p.minQty); setSize(p.sizes[0] ?? ""); setColor(variantsOf(p)[0]?.color ?? ""); setImg(0); } }, [p?.id]); // eslint-disable-line
+  useEffect(() => { if (p) { setQty(p.minQty); setSize((p.sizes || [])[0] ?? ""); setColor(variantsOf(p)[0]?.color ?? ""); setImg(0); } }, [p?.id]); // eslint-disable-line
   if (productsLoading) return <LogoLoader />;
   if (!p) return <div className="mx-auto max-w-7xl px-4 py-20 text-center"><h1 className="text-4xl">Product not found</h1><Link href="/shop" className="mt-4 inline-block underline">Back to shop</Link></div>;
 
@@ -25,7 +26,15 @@ export default function ProductPage() {
   const priceUsd = v.priceUsd ?? (v.priceNgn ? Math.round((v.priceNgn / (settings.rate || 1)) * 100) / 100 : p.priceUsd);
   const stock = v.stock;
   const pickColor = (c: string) => { setColor(c); setImg(0); };
-  const addToCart = (go: boolean) => { add({ productId: p.id, name: p.name, image: images[0] ?? "", size, color, qty, minQty: p.minQty, priceNgn, priceUsd }); if (go) router.push("/cart"); else alert("Added to cart"); };
+  const addToCart = (go: boolean) => {
+    if (isAdmin) {
+      alert("Admin accounts cannot add products to cart. Sign in with a customer account to shop.");
+      return;
+    }
+    add({ productId: p.id, name: p.name, image: images[0] ?? "", size, color, qty, minQty: p.minQty, priceNgn, priceUsd });
+    if (go) router.push("/cart");
+    else alert("Added to cart");
+  };
   const opt = (on: boolean) => `border-2 border-primary px-3 py-2 text-sm font-bold ${on ? "bg-primary text-primary-foreground" : ""}`;
   return (
     <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 md:grid-cols-2">
@@ -40,7 +49,7 @@ export default function ProductPage() {
         <p className="mt-1 text-sm text-muted-foreground">{fmt(priceNgn, "NGN")} / {fmt(priceUsd, "USD")} per piece · wholesale</p>
         <p className="mt-6 leading-relaxed">{p.description}</p>
         {variants.some((x) => x.color) && <div className="mt-6"><p className="eyebrow mb-2">Colour: <span className="text-accent">{color}</span></p><div className="flex flex-wrap gap-2">{variants.map((x) => <button key={x.color} onClick={() => pickColor(x.color)} className={`${opt(color === x.color)} flex items-center gap-2 ${x.stock <= 0 ? "opacity-50" : ""}`}>{DOT[x.color.toLowerCase()] && <span className="h-4 w-4 rounded-full border border-neutral-400" style={{ background: DOT[x.color.toLowerCase()] }} />}{x.color}</button>)}</div></div>}
-        {p.sizes.length > 0 && <div className="mt-5"><p className="eyebrow mb-2">Size</p><div className="flex flex-wrap gap-2">{p.sizes.map((s) => <button key={s} onClick={() => setSize(s)} className={opt(size === s)}>{s}</button>)}</div></div>}
+        {(p.sizes?.length ?? 0) > 0 && <div className="mt-5"><p className="eyebrow mb-2">Size</p><div className="flex flex-wrap gap-2">{(p.sizes || []).map((s) => <button key={s} onClick={() => setSize(s)} className={opt(size === s)}>{s}</button>)}</div></div>}
         <div className="mt-5">
           <p className="eyebrow mb-2">Quantity · minimum {p.minQty}</p>
           <div className="flex w-fit items-center border-2 border-primary">
@@ -51,8 +60,16 @@ export default function ProductPage() {
         </div>
         <p className="mt-3 text-sm text-muted-foreground">{stock > 0 ? `${stock} in stock${color ? ` in ${color}` : ""}` : `${color || "This item"} is currently out of stock`}</p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <button className="btn flex-1" disabled={stock <= 0} onClick={() => addToCart(false)}>Add to cart</button>
-          <button className="btn btn-accent flex-1" disabled={stock <= 0} onClick={() => addToCart(true)}>Buy now</button>
+          {isAdmin ? (
+            <p className="flex-1 border-2 border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+              You are signed in as admin. Use a customer account to add items to cart and checkout.
+            </p>
+          ) : (
+            <>
+              <button className="btn flex-1" disabled={stock <= 0} onClick={() => addToCart(false)}>Add to cart</button>
+              <button className="btn btn-accent flex-1" disabled={stock <= 0} onClick={() => addToCart(true)}>Buy now</button>
+            </>
+          )}
         </div>
       </div>
     </div>

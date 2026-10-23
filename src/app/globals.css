@@ -41,9 +41,9 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Light theme when html does not have .dark */
 :root {
   --radius: 0.25rem;
-  /* Brand charcoal #333 + white, one accent (signal orange) */
   --background: oklch(0.99 0 0);
   --foreground: oklch(0.32 0 0);
   --card: oklch(1 0 0);
@@ -74,6 +74,40 @@
   --sidebar-border: oklch(0.42 0 0);
   --sidebar-ring: oklch(0.7 0.19 45);
   --shadow-block: 4px 4px 0 0 var(--primary);
+}
+
+/* Dark theme (default) */
+html.dark {
+  --background: oklch(0.18 0 0);
+  --foreground: oklch(0.96 0 0);
+  --card: oklch(0.22 0 0);
+  --card-foreground: oklch(0.96 0 0);
+  --popover: oklch(0.22 0 0);
+  --popover-foreground: oklch(0.96 0 0);
+  --primary: oklch(0.96 0 0);
+  --primary-foreground: oklch(0.18 0 0);
+  --secondary: oklch(0.26 0 0);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.26 0 0);
+  --muted-foreground: oklch(0.7 0 0);
+  --accent: oklch(0.72 0.19 45);
+  --accent-foreground: oklch(0.15 0 0);
+  --destructive: oklch(0.6 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.35 0 0);
+  --input: oklch(0.32 0 0);
+  --ring: oklch(0.72 0.19 45);
+  --whatsapp: oklch(0.72 0.17 150);
+  --whatsapp-foreground: oklch(0.99 0 0);
+  --sidebar: oklch(0.14 0 0);
+  --sidebar-foreground: oklch(0.96 0 0);
+  --sidebar-primary: oklch(0.72 0.19 45);
+  --sidebar-primary-foreground: oklch(0.15 0 0);
+  --sidebar-accent: oklch(0.28 0 0);
+  --sidebar-accent-foreground: oklch(0.96 0 0);
+  --sidebar-border: oklch(0.3 0 0);
+  --sidebar-ring: oklch(0.72 0.19 45);
+  --shadow-block: 4px 4px 0 0 oklch(0.5 0 0);
 }
 
 @layer base {

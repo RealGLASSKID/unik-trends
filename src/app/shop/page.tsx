@@ -18,14 +18,14 @@ export default function Shop() {
 
   const price = (p: { priceNgn: number; priceUsd: number }) => (currency === "NGN" ? p.priceNgn : p.priceUsd);
   const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category).filter(Boolean))), [products]);
-  const sizes = useMemo(() => Array.from(new Set(products.flatMap((p) => p.sizes))), [products]);
-  const top = useMemo(() => Math.ceil(Math.max(0, ...products.map(price))), [products, currency]); // eslint-disable-line
+  const sizes = useMemo(() => Array.from(new Set(products.flatMap((p) => p.sizes || []))), [products]);
+  const top = useMemo(() => Math.ceil(Math.max(0, ...products.map((p) => Number(price(p)) || 0), 0)), [products, currency]); // eslint-disable-line
   const limit = maxPrice === null || maxPrice > top ? top : maxPrice;
   const list = products.filter((p) =>
     (!q || `${p.name} ${p.description} ${p.category}`.toLowerCase().includes(q.toLowerCase())) &&
     (!category || p.category === category) &&
     (!gender || p.gender === gender || p.gender === "unisex") &&
-    (!size || p.sizes.includes(size)) && price(p) <= limit);
+    (!size || (p.sizes || []).includes(size)) && (Number(price(p)) || 0) <= limit);
   const Chip = ({ on, set, children }: { on: boolean; set: () => void; children: React.ReactNode }) => <button onClick={set} className={`chip ${on ? "on" : ""}`}>{children}</button>;
 
   return (
