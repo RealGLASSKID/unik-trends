@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { ADMIN_EMAIL } from "@/lib/app";
+import { isOwnerEmail } from "@/lib/app";
 
 /** "UNIK trends" wordmark with a light that sweeps through the letters, again and again. */
 export function LogoLoader({ full, label }: { full?: boolean; label?: string }) {
@@ -42,7 +42,7 @@ export function GoogleButton({ label = "Sign up with Google", to = "/" }: { labe
       const { user } = await signInWithPopup(auth, new GoogleAuthProvider());
       await setDoc(doc(db, "users", user.uid), { email: user.email ?? "", name: user.displayName ?? "", photo: user.photoURL ?? "", updatedAt: Date.now() }, { merge: true });
       const em = user.email?.toLowerCase() ?? "";
-      let admin = !!em && em === ADMIN_EMAIL;
+      let admin = isOwnerEmail(em);
       if (!admin && em) admin = await getDoc(doc(db, "admins", em)).then((d) => d.exists()).catch(() => false);
       router.push(admin ? "/admin" : to);
     } catch (e) { setErr((e as Error).message.replace("Firebase: ", "")); setBusy(false); }

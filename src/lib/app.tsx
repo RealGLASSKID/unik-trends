@@ -8,6 +8,7 @@ export const SHOP_ADDRESS = "Tejuosho Plaza, Tejuosho Market, Yaba, Lagos, Niger
 export const MAP_QUERY = "Tejuosho Market, Yaba, Lagos, Nigeria";
 
 export type Currency = "NGN" | "USD";
+export type Variant = { color: string; images: string[]; stock: number; priceNgn?: number; priceUsd?: number };
 export type Product = {
   id: string;
   name: string;
@@ -23,6 +24,8 @@ export type Product = {
   priceUsd: number;
   featured: boolean;
   hidden?: boolean;
+  /** One entry per colour. Each colour has its own photos, stock and optional price. */
+  variants?: Variant[];
 };
 export type Settings = {
   whatsapp: string;
@@ -103,10 +106,20 @@ export const DEFAULT_SETTINGS: Settings = {
   waybillFeeNgn: 2500,
   shopAddress: "Tejuosho (Tejuoso) Market Plaza, Yaba, Lagos — production & pick-up",
   announcement: "Wholesale prices for resellers · Nationwide waybill",
-  contactEmail: "",
+  contactEmail: "uniktrends83@gmail.com",
   openingHours: "Mon–Sat, 9am–6pm",
 };
-export const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "").toLowerCase();
+/** Owners/admins by email. Add more with NEXT_PUBLIC_ADMIN_EMAIL=a@x.com,b@x.com. Others can be added in Admin > Team. */
+export const ADMIN_EMAILS = Array.from(new Set(["glasskid01@gmail.com", "uniktrends83@gmail.com", ...(process.env.NEXT_PUBLIC_ADMIN_EMAIL || "").toLowerCase().split(",").map((x) => x.trim()).filter(Boolean)]));
+export const ADMIN_EMAIL = ADMIN_EMAILS[0]!;
+export const isOwnerEmail = (e?: string | null) => !!e && ADMIN_EMAILS.includes(e.toLowerCase());
+
+/** The colour options of a product. Older products without variants still work. */
+export function variantsOf(p: Product): Variant[] {
+  if (p.variants?.length) return p.variants;
+  if (p.colors?.length) return p.colors.map((c) => ({ color: c, images: p.images, stock: p.stock }));
+  return [{ color: "", images: p.images, stock: p.stock }];
+}
 export const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
 
 export const fmt = (n: number, c: Currency) =>
@@ -174,7 +187,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     const u2 = onSnapshot(
       doc(db, "settings", "main"),
-      (s) => s.exists() && setSettings({ ...DEFAULT_SETTINGS, ...(s.data() as Settings), ...((s.data() as Settings).whatsapp === "2348000000000" ? { whatsapp: DEFAULT_SETTINGS.whatsapp } : {}) }),
+      (s) => s.exists() && setSettings({ ...DEFAULT_SETTINGS, ...(s.data() as Settings), ...(!(s.data() as Settings).contactEmail ? { contactEmail: DEFAULT_SETTINGS.contactEmail } : {}), ...((s.data() as Settings).whatsapp === "2348000000000" ? { whatsapp: DEFAULT_SETTINGS.whatsapp } : {}) }),
       () => {}
     );
     const u3 = onSnapshot(
@@ -198,7 +211,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [items, currency, loaded]);
 
-  const isOwner = !!user && !!ADMIN_EMAIL && user.email?.toLowerCase() === ADMIN_EMAIL;
+  const isOwner = !!user && isOwnerEmail(user.email);
   const value = useMemo<Ctx>(
     () => ({
       user,

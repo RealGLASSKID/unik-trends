@@ -11,7 +11,7 @@ import {
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { ADMIN_EMAIL, useApp } from "@/lib/app";
+import { useApp } from "@/lib/app";
 import { GoogleButton, LogoLoader } from "@/components/Brand";
 
 async function ensureUserDoc(u: User, extra?: { name?: string }) {

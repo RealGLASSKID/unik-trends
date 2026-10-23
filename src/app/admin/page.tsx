@@ -27,7 +27,8 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import {
-  ADMIN_EMAIL,
+  ADMIN_EMAILS,
+  variantsOf,
   CATEGORIES,
   DEFAULT_SETTINGS,
   STATUSES,
@@ -39,6 +40,7 @@ import {
   type Settings,
 } from "@/lib/app";
 import { LogoLoader } from "@/components/Brand";
+import { DOT, VariantEditor, blankVariant } from "@/components/VariantEditor";
 import type { Order } from "@/lib/app";
 
 const LOW = 10;
@@ -76,11 +78,10 @@ const blank: Draft = {
   priceUsd: 0,
   featured: false,
   hidden: false,
+  variants: [blankVariant()],
 };
 
-const COLORS = ["Black", "White", "Charcoal", "Grey", "Navy", "Blue", "Light Blue", "Washed Black", "Red", "Green", "Brown", "Cream", "Sand", "Pink", "Purple", "Orange", "Yellow"];
 const SIZES = ["S", "M", "L", "XL", "XXL", "XXXL", "26", "28", "30", "32", "34", "36", "38", "40"];
-const DOT: Record<string, string> = { black: "#111", white: "#fff", charcoal: "#333", grey: "#888", gray: "#888", navy: "#1b2a4a", blue: "#2563eb", "light blue": "#93c5fd", "washed black": "#2a2a2a", red: "#dc2626", green: "#16a34a", brown: "#7c4a21", cream: "#f5efdc", sand: "#d8c3a0", pink: "#f472b6", purple: "#7e22ce", orange: "#f97316", yellow: "#facc15" };
 function Picker({ label, options, value, onChange, hint, dots }: { label: string; options: string[]; value: string[]; onChange: (v: string[]) => void; hint: string; dots?: boolean }) {
   const [t, setT] = useState("");
   const all = [...options, ...value.filter((v) => !options.some((o) => o.toLowerCase() === v.toLowerCase()))];
@@ -388,8 +389,17 @@ export default function Admin() {
     if (!draft) return;
     setBusy(true);
     try {
+      const variants = (draft.variants ?? []).map((v) => ({ ...v, color: v.color.trim() })).filter((v) => v.color);
+      if (!draft.category.trim()) throw new Error("Enter the product type (e.g. Hoodies, Baggy Jeans).");
+      if (!variants.length) throw new Error("Add at least one colour.");
+      if (variants.some((v) => !v.images.length)) throw new Error("Every colour needs at least one photo.");
+      const clean = variants.map((v) => ({ color: v.color, images: v.images, stock: Number(v.stock) || 0, ...(v.priceNgn ? { priceNgn: v.priceNgn } : {}), ...(v.priceUsd ? { priceUsd: v.priceUsd } : {}) }));
       const { id, ...data } = {
         ...draft,
+        variants: clean,
+        colors: clean.map((v) => v.color),
+        images: clean[0]!.images,
+        stock: clean.reduce((n, v) => n + v.stock, 0),
         priceUsd:
           draft.priceUsd ||
           Math.round((draft.priceNgn / (settings.rate || 1)) * 100) / 100,
@@ -618,11 +628,10 @@ export default function Admin() {
                   </select>
                 </div>
                 <Picker label="Sizes" options={SIZES} value={draft.sizes} onChange={(sizes) => setDraft({ ...draft, sizes })} hint="Pick sizes or type your own (e.g. 38, Free size)" />
-                <Picker label="Colours" options={COLORS} value={draft.colors} onChange={(colors) => setDraft({ ...draft, colors })} hint="Pick colours or type one that is not listed" dots />
+                <VariantEditor value={draft.variants ?? []} onChange={(variants) => setDraft({ ...draft, variants })} />
                 <div className="grid grid-cols-2 gap-3">
                   {num("priceNgn", "Price ₦")}
                   {num("priceUsd", "Price $ (0 = auto from rate)")}
-                  {num("stock", "Stock")}
                   {num("minQty", "Minimum order qty")}
                 </div>
                 <label className="flex items-center gap-2 text-sm font-bold">
@@ -645,38 +654,6 @@ export default function Admin() {
                   />
                   Hide from the shop
                 </label>
-                <div>
-                  <p className="mb-1 text-xs font-bold uppercase">Images</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => upload(e.target.files)}
-                  />
-                  {busy && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Uploading…
-                    </p>
-                  )}
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {draft.images.map((u, i) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        key={i}
-                        src={u}
-                        alt=""
-                        className="h-20 w-16 cursor-pointer object-cover"
-                        title="Click to remove"
-                        onClick={() =>
-                          setDraft({
-                            ...draft,
-                            images: draft.images.filter((_, j) => j !== i),
-                          })
-                        }
-                      />
-                    ))}
-                  </div>
-                </div>
                 <div className="flex gap-2">
                   <button
                     className="btn"
@@ -889,7 +866,7 @@ export default function Admin() {
                       >
                         <Copy className="h-4 w-4" />
                       </button>
-                      <button className="chip" onClick={() => setDraft(p)}>
+                      <button className="chip" onClick={() => setDraft({ ...p, variants: variantsOf(p).map((v) => ({ ...v })) })}>
                         Edit
                       </button>
                       <button
@@ -1273,8 +1250,8 @@ export default function Admin() {
             </form>
             <ul className="mt-4 divide-y text-sm">
               <li className="flex justify-between py-3">
-                <span>{ADMIN_EMAIL}</span>
-                <Badge c="bg-primary text-primary-foreground">Owner</Badge>
+                <span>{ADMIN_EMAILS.join(", ")}</span>
+                <Badge c="bg-primary text-primary-foreground">Owners</Badge>
               </li>
               {admins.map((a) => (
                 <li

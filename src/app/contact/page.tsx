@@ -41,6 +41,7 @@ export default function ContactPage() {
         Ordering needs no chat: pick your pieces and order or book online. Contact us only when you need something the website can not do.
         Messages go straight to our admin dashboard and we reply within 48 hours.
       </p>
+      {settings.contactEmail && <p className="mt-3 text-sm">Email us: <a className="font-bold underline" href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a></p>}
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         <div className="border-2 border-primary p-5"><h2 className="text-xl">Send a message for</h2>
           <ul className="mt-3 grid gap-1 text-sm text-muted-foreground"><li>• Bulk or very large orders and special quantities</li><li>• Custom colours, sizes or your own designs</li><li>• Booking a visit to our shop in Tejuosho</li><li>• Help with an order you already placed</li><li>• Delivery arrangements other than waybill or pick-up</li></ul></div>

@@ -79,7 +79,7 @@ export function WhatsAppButton() {
   const { settings } = useApp();
   return <a href={waLink(settings.whatsapp, "Hi UNIK TRENDS, I'd like to make an enquiry.")} target="_blank" rel="noreferrer" aria-label="Chat on WhatsApp" className="fixed bottom-5 right-5 z-50 grid h-14 w-14 place-items-center rounded-full bg-whatsapp text-whatsapp-foreground shadow-lg"><MessageCircle className="h-7 w-7" /></a>;
 }
-export function ProductCard({ p }: { p: { id: string; name: string; images: string[]; category: string; minQty: number; priceNgn: number; priceUsd: number; featured: boolean; stock: number } }) {
+export function ProductCard({ p }: { p: { id: string; name: string; images: string[]; category: string; minQty: number; priceNgn: number; priceUsd: number; featured: boolean; stock: number; colors?: string[] } }) {
   const { currency } = useApp();
   const price = currency === "NGN" ? p.priceNgn : p.priceUsd;
   return (
@@ -89,7 +89,7 @@ export function ProductCard({ p }: { p: { id: string; name: string; images: stri
         {p.featured && <span className="eyebrow absolute left-2 top-2 bg-accent px-2 py-1 text-accent-foreground">Trending</span>}
         {p.stock <= 0 && <span className="eyebrow absolute right-2 top-2 bg-primary px-2 py-1 text-primary-foreground">Sold out</span>}
       </div>
-      <div className="mt-3 flex items-start justify-between gap-2"><div><h3 className="font-sans text-sm font-bold normal-case tracking-normal">{p.name}</h3><p className="text-xs text-muted-foreground">{p.category} · MOQ {p.minQty}</p></div><span className="text-sm font-bold">{fmt(price, currency)}</span></div>
+      <div className="mt-3 flex items-start justify-between gap-2"><div><h3 className="font-sans text-sm font-bold normal-case tracking-normal">{p.name}</h3><p className="text-xs text-muted-foreground">{p.category} · MOQ {p.minQty}{p.colors && p.colors.length > 1 ? ` · ${p.colors.length} colours` : ""}</p></div><span className="text-sm font-bold">{fmt(price, currency)}</span></div>
     </Link>
   );
 }
