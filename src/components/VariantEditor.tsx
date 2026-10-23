@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { uploadImage, type Variant } from "@/lib/app";
 
 export const COLORS = ["Black", "White", "Charcoal", "Grey", "Navy", "Blue", "Light Blue", "Washed Black", "Red", "Green", "Brown", "Cream", "Sand", "Pink", "Purple", "Orange", "Yellow"];
@@ -10,12 +10,13 @@ export const blankVariant = (): Variant => ({ color: "", images: [], stock: 0 })
 /** One card per colour. Each colour has its own photos (any number), stock and optional price. */
 export function VariantEditor({ value, onChange }: { value: Variant[]; onChange: (v: Variant[]) => void }) {
   const [busy, setBusy] = useState<number | null>(null);
+  const [err, setErr] = useState<{ i: number; m: string } | null>(null);
   const set = (i: number, patch: Partial<Variant>) => onChange(value.map((v, j) => (j === i ? { ...v, ...patch } : v)));
   const upload = async (i: number, files: FileList | null) => {
     if (!files?.length) return;
-    setBusy(i);
+    setBusy(i); setErr(null);
     try { const urls = await Promise.all(Array.from(files).map(uploadImage)); set(i, { images: [...value[i]!.images, ...urls] }); }
-    catch (e) { alert((e as Error).message); }
+    catch (e) { setErr({ i, m: (e as Error).message }); }
     setBusy(null);
   };
   const numOrUndef = (v: string) => (v === "" ? undefined : Number(v));
@@ -41,10 +42,13 @@ export function VariantEditor({ value, onChange }: { value: Variant[]; onChange:
                 </div>
               ))}
             </div>
-            <label className="mt-2 block text-xs font-bold uppercase">Photos for this colour (add as many as you like)
-              <input type="file" accept="image/*" multiple className="mt-1 block text-sm font-normal normal-case" onChange={(e) => { upload(i, e.target.files); e.target.value = ""; }} />
+            <label className="btn btn-accent mt-3 w-fit cursor-pointer !py-2">
+              <ImagePlus className="h-4 w-4" /> {v.images.length ? "Add more photos" : "Upload photos"}
+              <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { upload(i, e.target.files); e.target.value = ""; }} />
             </label>
-            {busy === i && <p className="mt-1 text-xs text-muted-foreground">Uploading…</p>}
+            <span className="ml-3 text-xs text-muted-foreground">{v.images.length} photo{v.images.length === 1 ? "" : "s"} · you can select many at once</span>
+            {busy === i && <p className="mt-2 text-sm font-bold text-accent">Uploading… please wait</p>}
+            {err?.i === i && <p className="mt-2 border-2 border-destructive p-2 text-sm font-bold text-destructive">{err.m}</p>}
           </div>
           <div className="grid grid-cols-3 gap-3">
             <label className="grid gap-1 text-xs font-bold uppercase">Stock<input className="field" type="number" min={0} value={v.stock} onChange={(e) => set(i, { stock: Number(e.target.value) })} /></label>

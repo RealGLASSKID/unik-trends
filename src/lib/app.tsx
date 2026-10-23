@@ -252,18 +252,26 @@ export async function uploadImage(file: File): Promise<string> {
     preset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
   if (!cloud || !preset)
     throw new Error(
-      "Cloudinary is not configured. Set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET."
+      "Cloudinary keys not found. In your .env.local file add NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET (the NEXT_PUBLIC_ part is required), then stop and restart the server."
     );
+  if (file.size > 10 * 1024 * 1024) throw new Error(`${file.name} is bigger than 10MB. Please use a smaller photo.`);
   const body = new FormData();
   body.append("file", file);
   body.append("upload_preset", preset);
-  body.append("folder", "unik-trends/products");
-  const r = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, {
-    method: "POST",
-    body,
-  });
-  const j = await r.json();
-  if (!r.ok) throw new Error(j.error?.message ?? "Image upload failed");
+  let r: Response;
+  try {
+    r = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, { method: "POST", body });
+  } catch {
+    throw new Error("Could not reach Cloudinary. Check your internet connection.");
+  }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const m: string = j.error?.message ?? "Image upload failed";
+    if (/whitelist|unsigned/i.test(m)) throw new Error('Cloudinary rejected the upload: set your upload preset "Signing mode" to Unsigned, then save it.');
+    if (/preset/i.test(m) && /not found|invalid/i.test(m)) throw new Error("Cloudinary says the upload preset name is wrong. Check NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET.");
+    if (/cloud/i.test(m) && /not found|invalid|disabled/i.test(m)) throw new Error("Cloudinary says the cloud name is wrong. Check NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME.");
+    throw new Error(`Cloudinary: ${m}`);
+  }
   return (j.secure_url as string).replace("/upload/", "/upload/f_auto,q_auto,w_1000/");
 }
 
