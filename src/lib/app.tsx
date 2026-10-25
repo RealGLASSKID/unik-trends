@@ -197,23 +197,42 @@ export function normalizeProduct(id: string, raw: Record<string, unknown>): Prod
   };
 }
 
-/** The colour options of a product. Older products without variants still work. */
 export function variantsOf(p: Product): Variant[] {
-  if (p.variants?.length) return p.variants.map((v) => ({
-    color: v.color || "",
-    images: Array.isArray(v.images) ? v.images : [],
-    stock: Number(v.stock) || 0,
-    priceNgn: v.priceNgn,
-    priceUsd: v.priceUsd,
+  const baseImages = Array.isArray(p.images) ? p.images : [];
+  const fromVariants: Variant[] = (Array.isArray(p.variants) ? p.variants : []).map((v) => ({
+    color: String(v?.color || "").trim(),
+    images: Array.isArray(v?.images) ? v.images.filter(Boolean) : [],
+    stock: Number(v?.stock) || 0,
+    priceNgn: v?.priceNgn,
+    priceUsd: v?.priceUsd,
   }));
-  if (p.colors?.length) {
-    return p.colors.map((c) => ({
-      color: c,
-      images: p.images || [],
+
+  const list: Variant[] = fromVariants.filter((v) => v.color);
+  const seen = new Set(list.map((v) => v.color.toLowerCase()));
+
+  for (const c of Array.isArray(p.colors) ? p.colors : []) {
+    const name = String(c || "").trim();
+    if (!name || seen.has(name.toLowerCase())) continue;
+    seen.add(name.toLowerCase());
+    list.push({
+      color: name,
+      images: baseImages,
       stock: Number(p.stock) || 0,
-    }));
+      priceNgn: undefined,
+      priceUsd: undefined,
+    });
   }
-  return [{ color: "", images: p.images || [], stock: Number(p.stock) || 0 }];
+
+  if (list.length) return list;
+  return [
+    {
+      color: "",
+      images: baseImages,
+      stock: Number(p.stock) || 0,
+      priceNgn: undefined,
+      priceUsd: undefined,
+    },
+  ];
 }
 export const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
 
