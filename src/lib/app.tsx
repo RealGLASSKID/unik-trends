@@ -95,7 +95,7 @@ export type Order = {
 };
 
 export const CATEGORIES = ["Men", "Women", "Hoodies", "Baggy", "Other"];
-export const DELIVERY = ["Waybill", "Pick-up in person"];
+export const DELIVERY = ["Waybill", "Dispatch rider (Lagos area)", "Pick-up in person"];
 /** Waybill destination states — Lagos area first, then the rest of Nigeria */
 export const NIGERIA_STATES = [
   "Lagos",
@@ -154,7 +154,7 @@ export const DEFAULT_SETTINGS: Settings = {
   bannerSubtitle:
     "Trendy streetwear straight from the manufacturer. Wholesale prices for resellers across Nigeria.",
   deliveryInfo:
-    "Waybill: we send to any state via trusted park/logistics partners. Waybill fee is paid online with your order (or on pickup if you book).\nPick-up: collect your order in person at our Lagos workshop after confirmation.\nOther: send us a message on the Contact page to arrange a custom option.",
+    "Waybill: we send to any state via trusted park/logistics partners. Waybill fee is paid with your order.\nDispatch rider: Lagos-area delivery by dispatch (availability confirmed with the shop when you order).\nPick-up: collect in person at Tejuosho Plaza, Yaba after confirmation.",
   waybillFeeNgn: 2500,
   shopAddress: "Tejuosho (Tejuoso) Market Plaza, Yaba, Lagos — production & pick-up",
   announcement: "Wholesale prices for resellers · Nationwide waybill",
@@ -236,6 +236,27 @@ export function variantsOf(p: Product): Variant[] {
 }
 export const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
 
+/** Live USD→NGN rate (how many Naira per 1 USD). Falls back to null on network failure. */
+export async function fetchUsdNgnRate(): Promise<number | null> {
+  try {
+    const r = await fetch("https://open.er-api.com/v6/latest/USD", { cache: "no-store" });
+    if (!r.ok) return null;
+    const j = (await r.json()) as { rates?: { NGN?: number } };
+    const n = j.rates?.NGN;
+    if (typeof n === "number" && n > 0) return Math.round(n * 100) / 100;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Convert NGN price to USD using rate (NGN per 1 USD). */
+export function ngnToUsd(priceNgn: number, rate: number): number {
+  if (!rate || rate <= 0) return 0;
+  return Math.round((priceNgn / rate) * 100) / 100;
+}
+
+
 export const fmt = (n: number, c: Currency) =>
   c === "NGN"
     ? "₦" + Math.round(n).toLocaleString("en-NG")
@@ -287,6 +308,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const u1 = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setAuthLoading(false);
+      if (u) {
+        try { localStorage.setItem("unik_welcome_done", "1"); } catch {}
+      }
       if (u?.email)
         getDoc(doc(db, "admins", u.email.toLowerCase()))
           .then((d) => setListed(d.exists()))
@@ -324,6 +348,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("unik_currency", currency);
     }
   }, [items, currency, loaded]);
+
+  // Keep USD/NGN rate fresh so product $ prices track the market
+  useEffect(() => {
+    let cancelled = false;
+    const pull = async () => {
+      const live = await fetchUsdNgnRate();
+      if (!cancelled && live && live > 0) {
+        setSettings((s) => (Math.abs((s.rate || 0) - live) < 0.5 ? s : { ...s, rate: live }));
+      }
+    };
+    pull();
+    const id = setInterval(pull, 1000 * 60 * 60); // refresh hourly
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
 
   const isOwner = !!user && isOwnerEmail(user.email);
   const value = useMemo<Ctx>(

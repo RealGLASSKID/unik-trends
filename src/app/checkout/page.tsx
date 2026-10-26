@@ -42,6 +42,7 @@ export default function Checkout() {
   }, [authLoading, user, router]);
 
   const isWaybill = orderType === "order" && f.delivery === "Waybill";
+  const isDispatch = orderType === "order" && f.delivery.startsWith("Dispatch");
   const waybillFee = isWaybill ? settings.waybillFeeNgn || 0 : 0;
   const subtotalNgn = total("NGN");
   const grandNgn = subtotalNgn + waybillFee;
@@ -88,7 +89,9 @@ export default function Checkout() {
       ? "Pick-up in person (booked)"
       : isWaybill
         ? `Waybill · ${f.state}`
-        : "Pick-up in person";
+        : isDispatch
+          ? "Dispatch rider (Lagos area)"
+          : "Pick-up in person";
 
   const buildPayload = (extra: Record<string, unknown>) => ({
     userId: user.uid,
@@ -162,6 +165,11 @@ export default function Checkout() {
       }
       if (isWaybill && !f.state) {
         setErr("Select a destination state.");
+        setBusy(false);
+        return;
+      }
+      if (isDispatch && !f.address.trim()) {
+        setErr("Enter your Lagos delivery address for the dispatch rider.");
         setBusy(false);
         return;
       }
@@ -414,7 +422,21 @@ export default function Checkout() {
               </>
             )}
 
-            {!isWaybill && (
+            {isDispatch && (
+              <>
+                <div className="border-2 border-accent bg-accent/10 p-3 text-xs">
+                  Dispatch rider is for <b>Lagos area</b>. Fee is confirmed with the shop when processing your order (owner riders may apply).
+                </div>
+                <input
+                  className="field"
+                  placeholder="Lagos delivery address"
+                  required
+                  value={f.address}
+                  onChange={(e) => setF({ ...f, address: e.target.value })}
+                />
+              </>
+            )}
+            {!isWaybill && !isDispatch && (
               <p className="flex items-start gap-2 border-2 border-border bg-muted/40 p-3 text-xs text-muted-foreground">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                 Collect at Tejuosho Plaza, Yaba, Lagos after payment is confirmed.

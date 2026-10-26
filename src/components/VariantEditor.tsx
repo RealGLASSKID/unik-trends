@@ -7,7 +7,7 @@ export const COLORS = ["Black", "White", "Charcoal", "Grey", "Navy", "Blue", "Li
 export const DOT: Record<string, string> = { black: "#111", white: "#fff", charcoal: "#333", grey: "#888", gray: "#888", navy: "#1b2a4a", blue: "#2563eb", "light blue": "#93c5fd", "washed black": "#2a2a2a", red: "#dc2626", green: "#16a34a", brown: "#7c4a21", cream: "#f5efdc", sand: "#d8c3a0", pink: "#f472b6", purple: "#7e22ce", orange: "#f97316", yellow: "#facc15" };
 export const blankVariant = (): Variant => ({ color: "", images: [], stock: 0 });
 
-/** One card per colour. Each colour has its own photos (any number), stock and optional price. */
+/** One card per colour — name, photos, stock. Product price is set once on the product form. */
 export function VariantEditor({ value, onChange }: { value: Variant[]; onChange: (v: Variant[]) => void }) {
   const [busy, setBusy] = useState<number | null>(null);
   const [err, setErr] = useState<{ i: number; m: string } | null>(null);
@@ -19,11 +19,10 @@ export function VariantEditor({ value, onChange }: { value: Variant[]; onChange:
     catch (e) { setErr({ i, m: (e as Error).message }); }
     setBusy(null);
   };
-  const numOrUndef = (v: string) => (v === "" ? undefined : Number(v));
   return (
     <div className="grid gap-3">
       <datalist id="colour-list">{COLORS.map((c) => <option key={c} value={c} />)}</datalist>
-      <p className="text-xs font-bold uppercase">Colours <span className="font-normal normal-case text-muted-foreground">· one card per colour, with its own photos. Pick from the list or type any colour.</span></p>
+      <p className="text-xs font-bold uppercase">Colours <span className="font-normal normal-case text-muted-foreground">· one card per colour with its own photos. Price is set once below for the whole product.</span></p>
       {value.map((v, i) => (
         <div key={i} className="grid gap-3 border-2 border-primary p-4">
           <div className="flex items-center gap-2">
@@ -50,14 +49,14 @@ export function VariantEditor({ value, onChange }: { value: Variant[]; onChange:
             {busy === i && <p className="mt-2 text-sm font-bold text-accent">Uploading… please wait</p>}
             {err?.i === i && <p className="mt-2 border-2 border-destructive p-2 text-sm font-bold text-destructive">{err.m}</p>}
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <label className="grid gap-1 text-xs font-bold uppercase">Stock<input className="field" type="number" min={0} value={v.stock} onChange={(e) => set(i, { stock: Number(e.target.value) })} /></label>
-            <label className="grid gap-1 text-xs font-bold uppercase">Price ₦ <span className="font-normal normal-case">(optional)</span><input className="field" type="number" min={0} value={v.priceNgn ?? ""} onChange={(e) => set(i, { priceNgn: numOrUndef(e.target.value) })} /></label>
-            <label className="grid gap-1 text-xs font-bold uppercase">Price $ <span className="font-normal normal-case">(optional)</span><input className="field" type="number" min={0} step="any" value={v.priceUsd ?? ""} onChange={(e) => set(i, { priceUsd: numOrUndef(e.target.value) })} /></label>
-          </div>
+          <label className="grid max-w-[10rem] gap-1 text-xs font-bold uppercase">Stock
+            <input className="field" type="number" min={0} value={v.stock} onChange={(e) => set(i, { stock: Number(e.target.value) })} />
+          </label>
         </div>
       ))}
-      <button type="button" className="btn btn-ghost w-fit" onClick={() => onChange([...value, blankVariant()])}><Plus className="h-4 w-4" /> Add another colour</button>
+      <button type="button" className="btn btn-ghost w-fit" onClick={() => onChange([...value, blankVariant()])}>
+        <Plus className="h-4 w-4" /> Add another colour
+      </button>
     </div>
   );
 }

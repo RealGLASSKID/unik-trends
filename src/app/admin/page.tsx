@@ -34,6 +34,7 @@ import {
   DEFAULT_SETTINGS,
   STATUSES,
   fmt,
+  ngnToUsd,
   uploadImage,
   useApp,
   waLink,
@@ -395,11 +396,14 @@ export default function Admin() {
       if (!draft.category.trim()) throw new Error("Enter the product type (e.g. Hoodies, Baggy Jeans).");
       if (!variants.length) throw new Error("Add at least one colour.");
       if (variants.some((v) => !v.images.length)) throw new Error("Every colour needs at least one photo.");
-      const clean = variants.map((v) => ({ color: v.color, images: v.images, stock: Number(v.stock) || 0, ...(v.priceNgn ? { priceNgn: v.priceNgn } : {}), ...(v.priceUsd ? { priceUsd: v.priceUsd } : {}) }));
+      const clean = variants.map((v) => ({
+        color: v.color,
+        images: v.images,
+        stock: Number(v.stock) || 0,
+      }));
+      // Single product price in NGN; USD always derived from live/settings rate
       const priceNgn = Number(draft.priceNgn) || 0;
-      const priceUsd =
-        Number(draft.priceUsd) ||
-        Math.round((priceNgn / (settings.rate || 1)) * 100) / 100;
+      const priceUsd = ngnToUsd(priceNgn, settings.rate || 1500);
       const sizes = Array.isArray(draft.sizes) ? draft.sizes.map(String) : [];
       const { id, ...rest } = draft;
       const data = {
@@ -647,8 +651,33 @@ export default function Admin() {
                 <Picker label="Sizes" options={SIZES} value={draft.sizes} onChange={(sizes) => setDraft({ ...draft, sizes })} hint="Pick sizes or type your own (e.g. 38, Free size)" />
                 <VariantEditor value={draft.variants ?? []} onChange={(variants) => setDraft({ ...draft, variants })} />
                 <div className="grid grid-cols-2 gap-3">
-                  {num("priceNgn", "Price ₦")}
-                  {num("priceUsd", "Price $ (0 = auto from rate)")}
+                  <label className="grid gap-1 text-xs font-bold uppercase">
+                    Price ₦
+                    <input
+                      className="field"
+                      type="number"
+                      min={0}
+                      step="any"
+                      value={draft.priceNgn || ""}
+                      onChange={(e) => {
+                        const n = Number(e.target.value) || 0;
+                        setDraft({
+                          ...draft,
+                          priceNgn: n,
+                          priceUsd: ngnToUsd(n, settings.rate || 1500),
+                        });
+                      }}
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs font-bold uppercase">
+                    Price $ <span className="font-normal normal-case text-muted-foreground">(auto · ₦{Math.round(settings.rate || 0)}/$)</span>
+                    <input
+                      className="field bg-muted"
+                      type="number"
+                      readOnly
+                      value={draft.priceNgn ? ngnToUsd(Number(draft.priceNgn), settings.rate || 1500) : ""}
+                    />
+                  </label>
                   {num("minQty", "Minimum order qty")}
                 </div>
                 <label className="flex items-center gap-2 text-sm font-bold">

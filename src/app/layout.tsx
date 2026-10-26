@@ -3,9 +3,24 @@ import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "UNIK TRENDS | Wholesale Streetwear",
-  description: "Trendy Nigerian streetwear at wholesale prices for resellers.",
+  title: {
+    default: "UNIK TRENDS | Wholesale Streetwear Nigeria",
+    template: "%s | UNIK TRENDS",
+  },
+  description:
+    "UNIK TRENDS produces and wholesales Nigerian streetwear — baggy denim, hoodies and sets. Factory-direct prices for resellers. Tejuosho Plaza, Yaba, Lagos. Founded by Michael Agunama Udochukwu.",
   applicationName: "UNIK TRENDS",
+  authors: [{ name: "Michael Agunama Udochukwu" }, { name: "GLASSKID", url: "https://glasskid.vercel.app" }],
+  creator: "Michael Agunama Udochukwu",
+  publisher: "UNIK TRENDS",
+  keywords: [
+    "UNIK TRENDS",
+    "wholesale streetwear Nigeria",
+    "baggy jeans wholesale Lagos",
+    "Tejuosho Yaba clothes",
+    "reseller fashion Nigeria",
+    "Michael Agunama Udochukwu",
+  ],
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -20,6 +35,14 @@ export const metadata: Metadata = {
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
   },
   manifest: "/manifest.json",
+  openGraph: {
+    title: "UNIK TRENDS | Wholesale Streetwear",
+    description:
+      "Factory-direct Nigerian streetwear for resellers. Book or order online. Tejuosho, Yaba, Lagos.",
+    siteName: "UNIK TRENDS",
+    locale: "en_NG",
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {

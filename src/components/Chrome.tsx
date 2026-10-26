@@ -91,9 +91,14 @@ export function Footer() {
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-4">
         <div className="md:col-span-2"><Logo inverted /><p className="mt-4 max-w-sm text-sm opacity-70">Trendy streetwear made in Nigeria. Baggy denim, heavyweight hoodies and more, at wholesale prices for resellers.</p></div>
         <div className="flex flex-col gap-2 text-sm"><span className="eyebrow mb-2 text-accent">Shop</span><Link href="/shop">All products</Link><Link href="/cart">Cart</Link></div>
-        <div className="flex flex-col gap-2 text-sm"><span className="eyebrow mb-2 text-accent">Info</span><Link href="/about">About</Link><a href="/#delivery">Delivery &amp; Pick-up</a><Link href="/contact">Contact</Link><Link href="/auth">Log in</Link></div>
+        <div className="flex flex-col gap-2 text-sm"><span className="eyebrow mb-2 text-accent">Info</span><Link href="/about">About</Link><Link href="/delivery">Delivery &amp; Pick-up</Link><Link href="/contact">Contact</Link><Link href="/auth">Log in</Link></div>
       </div>
-      <div className="border-t border-sidebar-border py-4 text-center text-xs opacity-60">© {new Date().getFullYear()} UNIK TRENDS · build-2026-10-21</div>
+      <div className="border-t border-sidebar-border py-4 text-center text-xs opacity-60">
+        © {new Date().getFullYear()} UNIK TRENDS · built and developed by{" "}
+        <a href="https://glasskid.vercel.app" target="_blank" rel="noreferrer" className="underline hover:text-accent">
+          GLASSKID
+        </a>
+      </div>
     </footer>
   );
 }

@@ -1,7 +1,11 @@
 "use client";
 
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import {
+  getAuth,
+  setPersistence,
+  browserLocalPersistence,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -19,4 +23,12 @@ function getFirebaseApp() {
 
 const app = getFirebaseApp();
 export const auth = getAuth(app);
+
+// Keep Google / email sessions across browser restarts (not just this tab)
+if (typeof window !== "undefined") {
+  setPersistence(auth, browserLocalPersistence).catch(() => {
+    /* ignore — default is already local in most browsers */
+  });
+}
+
 export const db = getFirestore(app);

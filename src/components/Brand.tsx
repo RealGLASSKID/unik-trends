@@ -58,8 +58,9 @@ export function GoogleButton({ label = "Sign up with Google", to = "/" }: { labe
 }
 
 /** Welcome screen: image on the left, details on the right (half screen each). Save your design as public/welcome.jpg */
-export function Welcome() {
+export function Welcome({ onDone }: { onDone?: () => void } = {}) {
   const [step, setStep] = useState<"welcome" | "signup">("welcome");
+  const finish = () => { onDone?.(); };
   return (
     <div className="fixed inset-0 z-[90] overflow-auto md:grid md:grid-cols-2">
       {/* Image: full background on mobile, left column on desktop */}
@@ -75,7 +76,10 @@ export function Welcome() {
             <h1 className="mt-8 text-5xl leading-[0.95] md:text-7xl">Welcome to UNIK TRENDS</h1>
             <p className="mt-5 max-w-md text-white/80 md:text-muted-foreground">Trendy Nigerian streetwear, made by us and sold at wholesale prices. Browse baggy jeans, hoodies and sets for men and women, then order online or book and pay at our shop in Tejuosho, Yaba.</p>
             <ul className="mt-5 grid gap-1 text-sm font-bold"><li>✓ Factory-direct wholesale prices in ₦ and $</li><li>✓ Order online or book and pay at the shop</li><li>✓ Waybill to any state, or pick up in person</li></ul>
-            <button className="btn btn-accent mt-8 w-fit" onClick={() => setStep("signup")}>Get started</button>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button className="btn btn-accent w-fit" onClick={() => setStep("signup")}>Get started</button>
+              <button type="button" className="btn btn-ghost w-fit border-white text-white md:border-primary md:text-primary" onClick={finish}>Continue browsing</button>
+            </div>
           </>
         ) : (
           <>
